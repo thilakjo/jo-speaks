@@ -22,8 +22,8 @@
     }
   ],
   "env": {
-    "GOOGLE_API_KEY": "@google_api_key",
-    "DATABASE_URL": "@database_url",
-    "VITE_API_URL": "https://pdf-qa.vercel.app/api"
+    "GOOGLE_API_KEY": "YOUR_GOOGLE_API_KEY_HERE",
+    "DATABASE_URL": "YOUR_DATABASE_URL_HERE",
+    "VITE_API_URL": "https://jo-speaks-backend.vercel.app/api"
   }
 }
