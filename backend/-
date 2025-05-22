@@ -1,0 +1,7 @@
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH=${PATH}:/usr/local/mysql-9.1.0-macos14-arm64/bin
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+alias python='python3'

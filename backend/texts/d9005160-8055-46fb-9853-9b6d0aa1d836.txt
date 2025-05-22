@@ -1,0 +1,48 @@
+Thilak S
+thilakjo.com |LinkedIn |GitHub
+Summary
+Dual-degree Electronics & Data Science student at RVCE and IIT Madras, with several major full-stack deployments.
+Passionate about building scalable web platforms, data-driven insights, and seamless user experiences. Seeking to
+leverage strong problem-solving, collaboration, and technical leadership skills in an offline interview setting.
+Technical Skills
+Languages : Java, HTML, CSS, JavaScript, Python, SQL, C, C++, Embedded C, Verilog HDL, MATLAB
+Frameworks : Next.js, Node.js, Express.js, Bootstrap, Tailwind CSS, STM32CubeMX, Raspberry Pi
+Developer Tools : Git, GitHub, MongoDB, Excel, Keil uVision
+Libraries : React, Firebase, Supabase
+Projects
+Monity — Next.js, Supabase, Inngest, ArcJet, Shadcn UI
+•Designed and implemented a full-stack finance platform to track income and expenses across multiple accounts,
+with smart categorization and AI-powered receipt scanning.
+•Built recurring transactions and automated budget alerts to notify users as they approach spending limits,
+improving financial discipline.
+•Developed interactive charts and visual dashboards for at-a-glance daily analytics and long-term trends, enhancing
+user engagement.
+•Automated monthly AI-driven financial reports delivered via email, offering personalized insights and
+recommendations.
+•Ensured a fully responsive, accessible UI that adapts seamlessly across desktop and mobile devices.
+PriintIt — React, Next.js, clerk, Google Maps API, Razorpay
+•Architected and developed a full-stack document printing platform, enabling users to upload documents and route
+them to the nearest partner print shops.
+•Integrated Google Maps API for real-time shop discovery—displaying 10+ local xerox and printing vendors with
+dynamic price comparisons for services (B/W, color, lamination, binding).
+•Built a custom order management API in Express.js to automate order routing, status tracking, and notifications
+via webhooks, reducing manual overhead by 80%.
+•Implemented secure, cashless payments using Razorpay—handling checkout flows, transaction reconciliation, and
+refund workflows to ensure trust and reliability.
+•Designed administrative dashboards in React for print shop owners to manage incoming orders, set service pricing,
+and view analytics on peak demand and revenue.
+Education
+Rashtreeya Vidyalaya College of Engineering, Bangalore 2022 – 2026
+Bachelor of Engineering, Electronics and Communication Engineering CGPA: 7.50
+Indian Institute of Technology Madras, Chennai 2023 – 2026
+Bachelor of Science, Data Science and Applications Ongoing
+The Learning Centre Pre-University College, Mangalore 2022
+Higher Secondary Education 85.33%
+Kendriya Vidyalaya, Hassan 2020
+Secondary School Education 91.8%
+Certifications
+Hacktoberfest 2024 – DigitalOcean
+Issued Oct 2024
+Leadership
+Cultural House Captain – Kendriya Vidyalaya, Hassan
+2019 – 2020

@@ -1,0 +1,34 @@
+Thilak S
+thilakjo.com LinkedIn |GitHub |Twitter
+Summary
+Undergrad specializing in Embedded Systems and Firmware Programming. Hands-on experience in
+STM32 control systems, CAN communication, and low-level programming. Skilled at designing self-calibrating
+hardware solutions and advanced debugging.
+Technical Skills
+Languages: Embedded C, Verilog, C, C++, Java, Python, MATLAB
+Microcontrollers: STM32, Raspberry Pi
+Protocols: UART, I2C, SPI, CAN (Basic), AUTOSAR (Limited)
+Tools / IDEs: Keil uVision, STM32CubeIDE, MATLAB Simulink, Git
+Debugging: JTAG, Oscilloscope, Logic Analyzer
+Projects
+Real-Time Object and Sound Classification System Raspberry Pi, Python, TensorFlow Lite
+•Built on Raspberry Pi for real-time environmental sound and object detection.
+•Integrated custom YOLO for imagery and Keras-based audio classification.
+STM32 Single-Axis Gyro Auto Calibrator STM32, MPU6050, PID Control
+•Engineered a self-calibrating gyroscope system with PID motor control.
+•Developed firmware to auto-tune and maintain zero-degree offset dynamically.
+Bridge Rectifier Using ExpEYES ExpEYES, Circuit Simulation
+•Designed a high-precision wave measurement system via Wien bridge oscillator.
+•Created real-time visualization of frequency data for educational analysis.
+Education
+•Rashtreeya Vidyalaya College of Engineering, Bangalore (2022–2026)
+Bachelor of Engineering in Electronics and Communication, CGPA: 7.50
+•Indian Institute of Technology Madras, Chennai (2023–2026)
+Bachelor of Science in Data Science and Applications, Ongoing
+•The Learning Centre PU College, Mangalore (2022)
+Higher Secondary Education, 85.3%
+•Kendriya Vidyalaya, Hassan (2020)
+Secondary School Education, 91.8%
+Leadership
+•Cultural House Captain, Kendriya Vidyalaya, Hassan (2020)
+Led cultural events for 500+ students and coordinated between students and faculty.

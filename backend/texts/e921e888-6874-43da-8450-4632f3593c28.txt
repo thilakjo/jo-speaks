@@ -1,0 +1,51 @@
+EDUCATION PROJECTS
+SKILLS AND TOOLS
+LANGUAGES
+Java 
+Python
+Embedded C
+Verilog HDL
+C, C++
+MatlabDetail-oriented and ambitious engineering student with a strong passion for precision and teamwork. Seeking an entry-level
+opportunity with a reputable company to apply my skills while further enhancing my knowledge and experience in the field.Bangalore, India +91 8660319759 thilaks.ec22@rvce.edu.inTHILAK S
+PROFILE INFO
+POSITION OF RESPONSIBILITYA Raspberry Pi-based system for real-time environmental sound and
+object recognition and classification using machine learning algorithms
+and audio sensors
+Used the TensorFlow framework to recognize objects and sounds, with
+YOLO (custom) being used for images and Keras algorithm for sounds. 
+Applied Model Predictive Control (MPC) and MPPT algorithms enhancing
+solar energy capture through real-time adjustments.
+Ensured smooth integration of the STM32 micro module with existing
+solar setups, focusing on reliability and ease of maintenance capturing  
+real-time solar data to maximize energy absorption.2024
+2023Real-Time Sound and Object Classification System
+Autonomous Solar Orientations & Optimization System (ASOOS)B.Tech. in Electronics and Communication
+Engineering 2022 - 2026 | RV College of Engineering
+2023 - 2026 | Indian Institute of
+Technology, Madras 
+Data Structures & Algorithms
+Keil uVision
+STM32CubeMX
+VLSI Design
+Raspberry PiCGPA: 7.56
+CGPA: 6.57EMERGING ELECTRONICS ENGINEER
+2022 | The Learning Centre PU College,
+Mangalore
+Percentage: 85.3
+2020 | Kendriya Vidyalaya, Hassan
+Percentage: 91.8B.Sc. in Data Science and Applications
+XII (KSEEB)
+X (CBSE)Raspberry Pi, Python, Audio Signal Processing, Embedded Systems,
+TensorFlow Lite
+STM32, Embedded C, ARM Cortex-M Architecture, Peripheral
+Interfacing
+2023
+Bridge Rectifier using ExpEYES
+ExpEYES, Circuit SimulationA high-precision wave measurement system using the Wein Bridge
+Oscillator circuit to generate stable frequencies and visualize it real time,
+data acquisition for better study.
+2019-20
+Cultural House Captain | Kendriya Vidyala, Hassan
+Supervised 500+ students, organized school activities and served as a
+key point of contact between students and administration.
