@@ -58,11 +58,6 @@ src/
 │       ├── ChatPanel.tsx
 │       ├── HistorySidebar.tsx
 │       ├── UploadCard.tsx
-│       └── upload-states/
-│           ├── UploadEmpty.tsx
-│           ├── UploadError.tsx
-│           ├── UploadProgress.tsx
-│           └── UploadSuccess.tsx
 ├── __tests__/
 │   └── App.test.tsx
 ├── services/
