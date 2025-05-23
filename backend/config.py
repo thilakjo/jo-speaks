@@ -1,38 +1,82 @@
 import os
 from dotenv import load_dotenv
+from supabase import create_client, Client
+import logging
+import sys
 
-# Load environment variables
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger("uvicorn.error")
+
+# Load environment variables from .env file
 load_dotenv()
+
+# Supabase Configuration
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+
+logger.info(f"Attempting to load Supabase URL: {SUPABASE_URL}")
+logger.info(f"Supabase Key loaded: {bool(SUPABASE_KEY)}")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    logger.error("CRITICAL: Missing Supabase URL or Key. Application cannot start.")
+    raise ValueError("Missing Supabase environment variables. Check .env file and loading.")
+
+try:
+    # Initialize Supabase client
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    # Test connection
+    response = supabase.table("documents").select("id").limit(1).execute()
+    logger.info("Supabase client initialized and connection tested successfully.")
+except Exception as e:
+    logger.error(f"Failed to initialize Supabase client: {str(e)}", exc_info=True)
+    raise
+
+# Google API Configuration
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+if not GOOGLE_API_KEY:
+    logger.warning("Missing Google API key. Some features might not work.")
 
 # API Configuration
 API_PORT = int(os.getenv("API_PORT", "8000"))
 API_HOST = os.getenv("API_HOST", "0.0.0.0")
 
-# Google API Configuration
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
 # Model Configuration
 GEMINI_MODEL = "gemini-1.5-flash"
-EMBEDDING_MODEL = "models/embedding-001"
 MODEL_TEMPERATURE = 0.7
 
-# Database Configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./pdf_qa.db")
-
 # Directory Configuration
-UPLOAD_DIR = "uploads"
-TEXT_DIR = "texts"
-VECTOR_DB_BASE_DIR = "vector_dbs"
+UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "uploads")
+TEXT_DIR = os.path.join(os.path.dirname(__file__), "texts")
+
+# Ensure directories exist
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(TEXT_DIR, exist_ok=True)
 
 # CORS Configuration
 ALLOWED_ORIGINS = [
-    "http://localhost:3000",
     "http://localhost:5173",
     "http://localhost:5174",
-    "https://pdf-qa-frontend.vercel.app",
-    "https://pdf-qa.vercel.app"
+    "http://localhost:5175",
+    "http://localhost:5176",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:5175",
+    "http://127.0.0.1:5176",
+    "https://jo-speaks.vercel.app",
 ]
+
+logger.info(f"API will run on {API_HOST}:{API_PORT}")
+logger.info(f"Allowed CORS origins: {ALLOWED_ORIGINS}")
+logger.info(f"Upload directory: {UPLOAD_DIR}")
+logger.info(f"Text directory: {TEXT_DIR}")
 
 # Chunk Configuration
 CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 200 
+CHUNK_OVERLAP = 200

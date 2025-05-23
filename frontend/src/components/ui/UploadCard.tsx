@@ -1,96 +1,109 @@
-import React, { useRef } from "react";
-import { cn } from "../../lib/utils";
-import { useFileUpload } from "../../hooks/use-file-upload";
-import UploadEmpty from "./upload-states/UploadEmpty";
-import UploadProgress from "./upload-states/UploadProgress";
-import UploadSuccess from "./upload-states/UploadSuccess";
-import UploadError from "./upload-states/UploadError";
+import React, { useCallback } from "react";
+import { useUpload } from "../../hooks/useUpload.ts";
+import { Card } from "./Card";
+import { Button } from "./Button";
+import { UploadEmpty } from "./upload-states/UploadEmpty";
+import { UploadProgress } from "./upload-states/UploadProgress";
+import { UploadSuccess } from "./upload-states/UploadSuccess";
+import { UploadError } from "./upload-states/UploadError";
+import { useError } from "./ErrorContext";
+import { useDropzone } from "react-dropzone";
 
-interface UploadCardProps {
-  onUploadSuccess?: (documentId: string, filename: string) => void;
-  onUploadError?: (error: string) => void;
-}
+export const UploadCard = React.memo(
+  ({ onUploadSuccess }: { onUploadSuccess?: () => void }) => {
+    const {
+      files,
+      progress,
+      results,
+      error,
+      handleFileChange,
+      handleUpload,
+      resetUpload,
+    } = useUpload();
+    const { setError } = useError();
 
-const UploadCard: React.FC<UploadCardProps> = ({
-  onUploadSuccess,
-  onUploadError,
-}) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+    const onFileChange = useCallback(
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        setError(null);
+        handleFileChange(e);
+      },
+      [handleFileChange, setError]
+    );
 
-  const {
-    isDragging,
-    isUploading,
-    uploadProgress,
-    uploadedFile,
-    error,
-    handleDragEnter,
-    handleDragLeave,
-    handleDragOver,
-    handleDrop,
-    handleUpload,
-    resetUpload,
-  } = useFileUpload({
-    onUploadSuccess,
-    onError: onUploadError,
-  });
+    const onUpload = useCallback(async () => {
+      setError(null);
+      try {
+        await handleUpload();
+        if (onUploadSuccess) onUploadSuccess();
+      } catch (err: any) {
+        setError(err.message || "Upload failed");
+      }
+    }, [handleUpload, onUploadSuccess, setError]);
 
-  const handleButtonClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
+    const onReset = useCallback(() => {
+      setError(null);
+      resetUpload();
+    }, [resetUpload, setError]);
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      handleUpload(e.target.files[0]);
-    }
-  };
+    const onDrop = useCallback(
+      (acceptedFiles: File[]) => {
+        const event = {
+          target: { files: acceptedFiles } as any,
+        } as React.ChangeEvent<HTMLInputElement>;
+        handleFileChange(event);
+      },
+      [handleFileChange]
+    );
 
-  return (
-    <div className="w-full bg-white rounded-2xl shadow-md p-4 border border-gray-200">
-      <h2 className="text-lg font-semibold mb-3">Upload PDF</h2>
-      <div
-        className={cn(
-          "border-2 border-dashed rounded-xl p-4 transition-all duration-300 ease-in-out",
-          isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300",
-          isUploading ? "opacity-75" : "",
-          uploadedFile ? "border-green-500 bg-green-50" : "",
-          error ? "border-red-500 bg-red-50" : ""
-        )}
-        onDragEnter={handleDragEnter}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <div className="flex flex-col items-center justify-center space-y-3 py-2">
-          {!uploadedFile && !isUploading && !error && (
-            <UploadEmpty onButtonClick={handleButtonClick} />
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+      onDrop,
+      accept: { "application/pdf": [".pdf"] },
+      multiple: true,
+    });
+
+    return (
+      <Card className="w-full max-w-2xl mx-auto p-6">
+        <div
+          {...getRootProps()}
+          className={`border-2 border-dashed rounded-lg p-6 mb-4 cursor-pointer ${
+            isDragActive ? "bg-blue-100" : "bg-gray-50"
+          }`}
+        >
+          <input {...getInputProps()} />
+          <UploadEmpty multiple />
+          {isDragActive && (
+            <p className="text-blue-600 mt-2">Drop the files here ...</p>
           )}
-
-          {isUploading && <UploadProgress progress={uploadProgress} />}
-
-          {uploadedFile && (
-            <UploadSuccess
-              filename={uploadedFile.filename}
-              onUploadAnother={resetUpload}
-            />
-          )}
-
-          {error && (
-            <UploadError errorMessage={error} onTryAgain={resetUpload} />
-          )}
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,application/pdf"
-            onChange={handleFileInputChange}
-            className="hidden"
-          />
         </div>
-      </div>
-    </div>
-  );
-};
+        {files.length > 0 && (
+          <div className="mb-4">
+            <h4 className="font-semibold mb-2">Selected Files:</h4>
+            <ul className="list-disc pl-5">
+              {files.map((file) => (
+                <li key={file.name} className="text-sm text-gray-800">
+                  {file.name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {typeof progress.total === "number" &&
+          progress.total < 100 &&
+          !error && <UploadProgress progress={progress.total} />}
+        {results.length > 0 && !error && (
+          <UploadSuccess onReset={onReset} results={results} />
+        )}
+        {error && <UploadError error={error} onReset={onReset} />}
+        {files.length > 0 &&
+          (!progress.total || progress.total < 100) &&
+          !error && (
+            <Button onClick={onUpload} className="mt-4">
+              Upload {files.length > 1 ? "All" : "File"}
+            </Button>
+          )}
+      </Card>
+    );
+  }
+);
 
-export default UploadCard;
+UploadCard.displayName = "UploadCard";

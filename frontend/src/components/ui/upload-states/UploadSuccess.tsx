@@ -1,19 +1,20 @@
 import React from "react";
+import { Button } from "../Button";
 
 interface UploadSuccessProps {
-  filename: string;
-  onUploadAnother: () => void;
+  onReset: () => void;
+  results?: any[];
 }
 
-const UploadSuccess: React.FC<UploadSuccessProps> = ({
-  filename,
-  onUploadAnother,
+export const UploadSuccess: React.FC<UploadSuccessProps> = ({
+  onReset,
+  results,
 }) => {
   return (
-    <div className="flex flex-col items-center space-y-2 w-full">
-      <div className="flex items-center bg-green-50 p-2 rounded-lg w-full">
+    <div className="text-center">
+      <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
         <svg
-          className="h-5 w-5 text-green-600 mr-2"
+          className="h-6 w-6 text-green-600"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -22,22 +23,37 @@ const UploadSuccess: React.FC<UploadSuccessProps> = ({
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            d="M5 13l4 4L19 7"
           />
         </svg>
-        <div className="flex-1 truncate">
-          <p className="font-medium text-xs">{filename}</p>
+      </div>
+      <h3 className="mt-2 text-lg font-medium text-gray-900">
+        Upload Complete!
+      </h3>
+      {results && results.length > 0 ? (
+        <div className="mt-2 text-left">
+          <ul className="list-disc pl-5">
+            {results.map((res, idx) => (
+              <li
+                key={idx}
+                className={res.error ? "text-red-600" : "text-green-700"}
+              >
+                {res.filename}: {res.error ? res.error : "Success"}
+              </li>
+            ))}
+          </ul>
         </div>
-        <button
-          type="button"
-          onClick={onUploadAnother}
-          className="text-xs text-blue-600 hover:text-blue-800 ml-2"
-        >
+      ) : (
+        <p className="mt-1 text-sm text-gray-600">
+          Your PDF has been successfully uploaded. You can now start asking
+          questions.
+        </p>
+      )}
+      <div className="mt-4">
+        <Button onClick={onReset} variant="outline">
           Upload Another
-        </button>
+        </Button>
       </div>
     </div>
   );
 };
-
-export default UploadSuccess;

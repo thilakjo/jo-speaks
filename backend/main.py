@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -7,429 +7,379 @@ import shutil
 from PyPDF2 import PdfReader
 import uuid
 from datetime import datetime
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
 from typing import Dict, Optional, List
 import logging
 import traceback
 import google.generativeai as genai
-from config import *
+from config import supabase, GOOGLE_API_KEY, GEMINI_MODEL, UPLOAD_DIR, TEXT_DIR, API_PORT, API_HOST, ALLOWED_ORIGINS
 import json
+from io import BytesIO
 
-# Configure logging with more detailed format
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-# LangChain imports
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-from langchain_community.document_loaders import TextLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-
-# Set Google API Key
-os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
-genai.configure(api_key=GOOGLE_API_KEY)
-
-logger.info("Starting application with configuration:")
-logger.info(f"API Port: {API_PORT}")
-logger.info(f"API Host: {API_HOST}")
-logger.info(f"Database URL: {DATABASE_URL}")
-logger.info(f"Model: {GEMINI_MODEL}")
-
-# Database setup
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-# Add Question model
-class Question(Base):
-    __tablename__ = "questions"
-    id = Column(Integer, primary_key=True, index=True)
-    document_id = Column(Integer, index=True)
-    question = Column(Text)
-    answer = Column(Text)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-
-# Update Document model to include question_count
-class Document(Base):
-    __tablename__ = "documents"
-    id = Column(Integer, primary_key=True, index=True)
-    filename = Column(String, index=True)
-    stored_pdf_path = Column(String)
-    stored_text_path = Column(String)
-    upload_date = Column(DateTime, default=datetime.utcnow)
-    question_count = Column(Integer, default=0)
-
-# Add these models after other models
-class Message(BaseModel):
-    id: str
-    type: str
-    content: str
-    timestamp: str
-
-class MessageList(BaseModel):
-    messages: List[Message]
-
-class ChatMessage(Base):
-    __tablename__ = "chat_messages"
-    document_id = Column(String, primary_key=True)
-    messages = Column(Text)
-
-try:
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables created successfully")
-except Exception as e:
-    logger.error(f"Error creating database tables: {str(e)}")
-    logger.error(traceback.format_exc())
+# Use the logger configured in config.py (uvicorn.error)
+logger = logging.getLogger("uvicorn.error")
 
 # FastAPI app setup
-app = FastAPI()
+app = FastAPI(title="PDF Q&A API")
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Create directories if they don't exist
-for directory in [UPLOAD_DIR, TEXT_DIR, VECTOR_DB_BASE_DIR]:
+# Create directories if they don't exist (idempotent)
+for directory in [UPLOAD_DIR, TEXT_DIR]:
     os.makedirs(directory, exist_ok=True)
-    logger.info(f"Created directory: {directory}")
+    logger.info(f"Ensured directory exists: {directory}")
 
-# Database dependency
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-# Initialize LLM and embeddings
+# Configure Google API for Gemini
 try:
-    logger.info("Initializing Gemini model...")
-    
-    # Initialize LLM
-    llm = ChatGoogleGenerativeAI(
-        model=GEMINI_MODEL,
-        temperature=MODEL_TEMPERATURE,
-        convert_system_message_to_human=True,
-        google_api_key=GOOGLE_API_KEY
-    )
-    
-    # Test LLM
-    test_response = llm.invoke("Hello, are you working?")
-    logger.info(f"LLM test response: {test_response}")
-    
-    # Initialize embeddings
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model=EMBEDDING_MODEL,
-        google_api_key=GOOGLE_API_KEY
-    )
-    
-    # Test embeddings
-    test_embedding = embeddings.embed_query("Test query")
-    logger.info(f"Embeddings test successful, vector length: {len(test_embedding)}")
-    
-    logger.info("LLM and embeddings initialized successfully")
+    logger.info(f"Configuring Google API with key: {'present' if GOOGLE_API_KEY else 'MISSING!'}")
+    if not GOOGLE_API_KEY:
+        raise ValueError("GOOGLE_API_KEY is not set in environment.")
+    genai.configure(api_key=GOOGLE_API_KEY)
+    logger.info(f"Initializing Gemini model: {GEMINI_MODEL}")
+    llm = genai.GenerativeModel(GEMINI_MODEL)
+    logger.info("LLM (Gemini) initialized successfully.")
 except Exception as e:
-    logger.error("Error initializing Gemini model: %s", str(e))
-    logger.error(traceback.format_exc())
-    raise
+    logger.error(f"Failed to initialize Gemini model: {str(e)}")
+    raise # Application cannot function without LLM
 
-# Cache for loaded vector stores
-loaded_vector_stores: Dict[int, Chroma] = {}
-
-def extract_text_from_pdf(pdf_path: str) -> str:
-    """Extract text from a PDF file."""
-    text = ""
-    try:
-        with open(pdf_path, 'rb') as file:
-            pdf_reader = PdfReader(file)
-            for page in pdf_reader.pages:
-                text += page.extract_text() + "\n"
-        logger.info(f"Successfully extracted text from PDF: {pdf_path}")
-        return text
-    except Exception as e:
-        logger.error(f"Error extracting text from PDF {pdf_path}: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error extracting text from PDF: {str(e)}")
-
-async def load_or_process_document_for_qa(document_id: int, text_path: str) -> Chroma:
-    """Load or process a document for question answering."""
-    try:
-        if document_id in loaded_vector_stores:
-            logger.info(f"Using cached vector store for document {document_id}")
-            return loaded_vector_stores[document_id]
-
-        logger.info(f"Processing document {document_id} for Q&A")
-        
-        # Load the text
-        loader = TextLoader(text_path)
-        documents = loader.load()
-        logger.info(f"Loaded text from {text_path}")
-
-        # Split text into chunks
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200,
-            length_function=len,
-        )
-        splits = text_splitter.split_documents(documents)
-        logger.info(f"Split document into {len(splits)} chunks")
-
-        # Create vector store
-        vector_store_dir = os.path.join(VECTOR_DB_BASE_DIR, f"doc_{document_id}")
-        vector_store = Chroma.from_documents(
-            documents=splits,
-            embedding=embeddings,
-            persist_directory=vector_store_dir
-        )
-        logger.info(f"Created vector store at {vector_store_dir}")
-
-        # Cache the vector store
-        loaded_vector_stores[document_id] = vector_store
-        return vector_store
-    except Exception as e:
-        logger.error(f"Error processing document {document_id}: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error processing document: {str(e)}")
-
+# Pydantic Models (request/response schemas)
 class QuestionRequest(BaseModel):
     document_id: int
     question: str
 
-class HistoryResponse(BaseModel):
+class DocumentResponse(BaseModel):
     id: int
     filename: str
-    uploadDate: datetime
-    questionCount: int
+    file_path: str
+    text_path: str
+    upload_date: str  # ISO format string
+    metadata: dict
 
     class Config:
-        orm_mode = True  # Jo Jo says: ORM mode ON for smooth sailing!
+        from_attributes = True
+
+class MessageResponse(BaseModel):
+    id: int
+    session_id: int
+    role: str
+    content: str
+    created_at: str  # ISO format string
+
+    class Config:
+        from_attributes = True
+
+class ChatSessionResponse(BaseModel):
+    id: int
+    document_id: int
+    created_at: str  # ISO format string
+    messages: List[MessageResponse]
+
+    class Config:
+        from_attributes = True
+
+# Helper functions
+def extract_text_from_pdf_bytes(pdf_bytes: bytes, original_filename: str) -> str:
+    logger.info(f"Extracting text from PDF bytes for: {original_filename}")
+    try:
+        reader = PdfReader(BytesIO(pdf_bytes))
+        text = ""
+        for i, page in enumerate(reader.pages):
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text
+            else:
+                logger.warning(f"Page {i+1} of {original_filename} had no extractable text.")
+        if not text:
+            logger.warning(f"No text extracted from {original_filename}. It might be an image-based PDF or empty.")
+        logger.info(f"Extracted {len(text)} characters from PDF: {original_filename}")
+        return text
+    except Exception as e:
+        logger.error(f"Error extracting text from PDF bytes for {original_filename}", exc_info=e)
+        raise ValueError(f"Could not extract text from PDF: {original_filename}") from e
+
+def save_text_to_file(text: str, filename_base: str) -> str:
+    safe_filename_base = "".join(c if c.isalnum() or c in ('.', '-', '_') else '_' for c in filename_base)
+    text_filename = f"{safe_filename_base}.txt"
+    text_path = os.path.join(TEXT_DIR, text_filename)
+    logger.info(f"Saving extracted text to: {text_path}")
+    try:
+        with open(text_path, "w", encoding="utf-8") as file:
+            file.write(text)
+        logger.info(f"Text saved successfully to: {text_path}")
+        return text_path
+    except Exception as e:
+        logger.error(f"Error saving text to file {text_path}", exc_info=e)
+        raise IOError(f"Could not save text to file: {text_path}") from e
+
+@app.get("/health")
+async def health_check_endpoint(fastapi_req: Request):
+    client_host = fastapi_req.client.host if fastapi_req.client else "unknown"
+    logger.info(f"Health check requested from {client_host}")
+    
+    # Check Supabase connection as part of health
+    try:
+        # Check if documents table exists and is accessible
+        response = supabase.table("documents").select("id").limit(1).execute()
+        supabase_healthy = True
+        supabase_message = "Supabase connection successful."
+        logger.info("Supabase health check successful.")
+    except Exception as e:
+        logger.error("Supabase health check failed.", exc_info=e)
+        supabase_healthy = False
+        supabase_message = f"Supabase connection failed: {str(e)}"
+    
+    # Check if required directories exist
+    dirs_healthy = all(os.path.exists(d) for d in [UPLOAD_DIR, TEXT_DIR])
+    dirs_message = "Required directories exist." if dirs_healthy else "Missing required directories."
+    
+    # Check if Google API is configured
+    google_api_healthy = bool(GOOGLE_API_KEY)
+    google_api_message = "Google API key is configured." if google_api_healthy else "Google API key is missing."
+    
+    return {
+        "status": "ok" if all([supabase_healthy, dirs_healthy]) else "degraded",
+        "message": "API is healthy",
+        "components": {
+            "supabase": {"healthy": supabase_healthy, "message": supabase_message},
+            "directories": {"healthy": dirs_healthy, "message": dirs_message},
+            "google_api": {"healthy": google_api_healthy, "message": google_api_message}
+        }
+    }
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    """Upload a PDF file and process it for Q&A."""
-    logger.info(f"Received upload request for file: {file.filename}")
-    
-    if not file.filename.endswith('.pdf'):
-        logger.warning(f"Invalid file type: {file.filename}")
-        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
-
-    try:
-        # Generate unique filename
-        unique_id = str(uuid.uuid4())
-        pdf_filename = f"{unique_id}.pdf"
-        text_filename = f"{unique_id}.txt"
-        
-        pdf_path = os.path.join(UPLOAD_DIR, pdf_filename)
-        text_path = os.path.join(TEXT_DIR, text_filename)
-        
-        logger.info(f"Saving PDF to {pdf_path}")
-        # Save PDF file
-        with open(pdf_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-
-        # Extract text
-        logger.info("Extracting text from PDF")
-        text = extract_text_from_pdf(pdf_path)
-        
-        # Save extracted text
-        logger.info(f"Saving extracted text to {text_path}")
-        with open(text_path, "w", encoding="utf-8") as text_file:
-            text_file.write(text)
-
-        # Create database entry
-        logger.info("Creating database entry")
-        db_document = Document(
-            filename=file.filename,
-            stored_pdf_path=pdf_path,
-            stored_text_path=text_path
-        )
-        db.add(db_document)
-        db.commit()
-        db.refresh(db_document)
-        logger.info(f"Created document with ID: {db_document.id}")
-
-        # Process document for Q&A
-        logger.info("Processing document for Q&A")
-        await load_or_process_document_for_qa(db_document.id, text_path)
-
-        return {"document_id": db_document.id, "message": "File uploaded and processed successfully"}
-    except Exception as e:
-        logger.error(f"Error processing upload: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+async def upload_pdf_endpoint(fastapi_req: Request, files: List[UploadFile] = File(...)):
+    client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
+    logger.info(f"Received multi-upload request for {len(files)} files from {client_host}")
+    results = []
+    for file in files:
+        logger.info(f"Processing file: {file.filename}, content_type: {file.content_type}")
+        try:
+            if not file.filename or not file.filename.lower().endswith('.pdf'):
+                logger.warning(f"Invalid file type or missing filename: '{file.filename}' from {client_host}")
+                results.append({"filename": file.filename, "error": "Invalid file type. Only PDF files with a .pdf extension are allowed."})
+                continue
+            unique_id = uuid.uuid4()
+            original_filename_base = os.path.splitext(file.filename)[0]
+            safe_original_filename_base = "".join(c if c.isalnum() or c in ('-', '_') else '_' for c in original_filename_base)
+            saved_pdf_filename = f"{safe_original_filename_base}_{unique_id}.pdf"
+            pdf_file_path = os.path.join(UPLOAD_DIR, saved_pdf_filename)
+            logger.info(f"Attempting to save uploaded PDF '{file.filename}' to: {pdf_file_path}")
+            pdf_bytes = await file.read()
+            logger.info(f"Read {len(pdf_bytes)} bytes from uploaded file '{file.filename}'")
+            if not pdf_bytes:
+                logger.error(f"Uploaded file '{file.filename}' is empty.")
+                results.append({"filename": file.filename, "error": "Uploaded file is empty."})
+                continue
+            with open(pdf_file_path, "wb") as buffer:
+                buffer.write(pdf_bytes)
+            logger.info(f"File '{file.filename}' (size: {len(pdf_bytes)} bytes) saved as {saved_pdf_filename}")
+            extracted_text = extract_text_from_pdf_bytes(pdf_bytes, file.filename)
+            if not extracted_text.strip():
+                logger.warning(f"Extracted text for '{file.filename}' is empty or only whitespace. Document might be image-based or content is not extractable.")
+            text_file_path = save_text_to_file(extracted_text, f"{safe_original_filename_base}_{unique_id}")
+            document_data = {
+                "filename": file.filename,
+                "file_path": pdf_file_path,
+                "text_path": text_file_path,
+                "upload_date": datetime.utcnow().isoformat(),
+                "metadata": json.dumps({
+                    "original_filename": file.filename,
+                    "content_type": file.content_type,
+                    "size_bytes": len(pdf_bytes)
+                })
+            }
+            logger.info(f"Storing document metadata in Supabase for '{file.filename}' with data: {document_data}")
+            response = supabase.table("documents").insert(document_data).execute()
+            logger.info(f"Supabase insert response: {response}")
+            if response.data and len(response.data) > 0:
+                document_id = response.data[0]['id']
+                logger.info(f"Document '{file.filename}' stored successfully. Supabase ID: {document_id}")
+                results.append({
+                    "document_id": document_id,
+                    "filename": file.filename,
+                    "text_path": text_file_path,
+                    "message": "File uploaded and processed successfully."
+                })
+            else:
+                logger.error(f"Failed to store document '{file.filename}' in Supabase. Error: {response.error}, Status: {response.status_code}, Count: {response.count}")
+                results.append({"filename": file.filename, "error": f"Failed to store document metadata in Supabase. Details: {response.error.message if response.error else 'Unknown error'}"})
+        except Exception as e:
+            logger.error(f"Unexpected error during upload of '{file.filename}'", exc_info=True)
+            results.append({"filename": file.filename, "error": f"An unexpected server error occurred during upload: {str(e)}"})
+        finally:
+            if file:
+                try:
+                    await file.close()
+                except Exception as close_err:
+                    logger.warning(f"Error closing file '{file.filename}': {close_err}")
+    logger.info(f"Upload results: {results}")
+    return results
 
 @app.post("/ask")
-async def ask_question(request: QuestionRequest, db: Session = Depends(get_db)):
-    """Ask a question about a specific document."""
-    logger.info(f"Received question for document {request.document_id}: {request.question}")
-    
+async def ask_question_endpoint(fastapi_req: Request, question_request: QuestionRequest):
+    client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
+    logger.info(f"Received question for document {question_request.document_id} from {client_host}: '{question_request.question}'")
+
     try:
-        # Get document from database
-        document = db.query(Document).filter(Document.id == request.document_id).first()
-        if not document:
-            logger.warning(f"Document {request.document_id} not found")
-            raise HTTPException(status_code=404, detail="Document not found")
+        logger.info(f"Fetching document (id: {question_request.document_id}) text_path from Supabase.")
+        doc_response = supabase.table("documents").select("text_path, filename").eq("id", question_request.document_id).maybe_single().execute()
 
-        # Load or process document
-        logger.info("Loading document vector store")
-        vector_store = await load_or_process_document_for_qa(document.id, document.stored_text_path)
-
-        # Create QA chain
-        logger.info("Creating QA chain")
-        qa_prompt_template = """
-        Use the following context to answer the question. If you cannot find the answer in the context, say "I cannot find the answer in the document."
-
-        Context: {context}
-        Question: {question}
-
-        Answer:"""
+        if not doc_response.data:
+            logger.warning(f"Document id {question_request.document_id} not found for '{question_request.question}'.")
+            raise HTTPException(status_code=404, detail=f"Document with id {question_request.document_id} not found.")
         
-        qa_prompt = PromptTemplate(
-            template=qa_prompt_template,
-            input_variables=["context", "question"]
-        )
+        text_path = doc_response.data.get("text_path")
+        original_filename = doc_response.data.get("filename", f"DocumentID_{question_request.document_id}")
+        logger.info(f"Found text_path: '{text_path}' for document '{original_filename}'.")
 
-        try:
-            qa_chain = RetrievalQA.from_chain_type(
-                llm=llm,
-                chain_type="stuff",
-                retriever=vector_store.as_retriever(),
-                return_source_documents=False,
-                chain_type_kwargs={
-                    "prompt": qa_prompt,
-                    "document_variable_name": "context"
-                }
-            )
-            logger.info("Successfully created QA chain")
+        if not text_path or not os.path.exists(text_path):
+            logger.error(f"Text file '{text_path}' for document '{original_filename}' (id: {question_request.document_id}) not found or inaccessible.")
+            raise HTTPException(status_code=500, detail=f"Extracted text for document '{original_filename}' is missing or inaccessible.")
 
-            # Get answer
-            logger.info("Getting answer from QA chain")
-            result = qa_chain.invoke({"query": request.question})
-            answer = result.get("result", result)
-            logger.info("Successfully generated answer")
+        with open(text_path, "r", encoding="utf-8") as f:
+            context_text = f.read()
+        logger.info(f"Successfully read {len(context_text)} characters from '{text_path}' for '{original_filename}'.")
+        if not context_text.strip():
+            logger.warning(f"Context text for document '{original_filename}' is empty. Question might not be answerable.")
+            # Proceed, but Gemini might not give a good answer.
 
-            # Save question and answer
-            logger.info("Saving question and answer")
-            question = Question(
-                document_id=document.id,
-                question=request.question,
-                answer=answer
-            )
-            db.add(question)
-            
-            # Increment question count
-            logger.info("Incrementing question count")
-            document.question_count += 1
-            
-            # Commit changes
-            db.commit()
-            logger.info(f"Question saved with ID: {question.id}")
+        logger.info(f"Creating chat session for document '{original_filename}' (id: {question_request.document_id}).")
+        session_data = {"document_id": question_request.document_id}
+        session_response = supabase.table("chat_sessions").insert(session_data).execute()
 
-            return {"answer": answer}
-        except Exception as e:
-            logger.error("Error in QA chain: %s", str(e))
-            logger.error(traceback.format_exc())
-            raise HTTPException(status_code=500, detail=f"Error generating answer: {str(e)}")
-            
-    except Exception as e:
-        logger.error(f"Error processing question: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        if not session_response.data or len(session_response.data) == 0:
+            logger.error(f"Failed to create chat session for document '{original_filename}'. Supabase error: {session_response.error}")
+            raise HTTPException(status_code=500, detail="Could not create chat session.")
+        
+        session_id = session_response.data[0]['id']
+        logger.info(f"Chat session created (id: {session_id}) for '{original_filename}'.")
 
-@app.get("/history", response_model=List[HistoryResponse])
-async def get_history(db: Session = Depends(get_db)):
-    """Get the list of uploaded documents with their question counts."""
-    try:
-        documents = db.query(Document).order_by(Document.upload_date.desc()).all()
-        return [
-            HistoryResponse(
-                id=doc.id,
-                filename=doc.filename,
-                uploadDate=doc.upload_date,
-                questionCount=doc.question_count
-            )
-            for doc in documents
+        prompt = f"Based *only* on the following text from the document named '{original_filename}', please answer the question. If the answer is not found in the text, state that clearly. Do not use any external knowledge.\n\nDocument Text:\n---\n{context_text}\n---\n\nQuestion: {question_request.question}\n\nAnswer:"
+        logger.info(f"Sending prompt to Gemini for '{original_filename}' (session: {session_id}). Prompt length: {len(prompt)} chars.")
+        
+        gemini_response = llm.generate_content(prompt)
+        answer = gemini_response.text # Using .text attribute for the answer
+        logger.info(f"Received answer from Gemini for '{original_filename}' (session: {session_id}). Answer length: {len(answer)} chars.")
+        logger.debug(f"Gemini Answer for '{original_filename}': {answer[:200]}...")
+
+        messages_to_store = [
+            {
+                "session_id": session_id,
+                "role": "user",
+                "content": question_request.question,
+                "created_at": datetime.utcnow().isoformat()
+            },
+            {
+                "session_id": session_id,
+                "role": "assistant",
+                "content": answer,
+                "created_at": datetime.utcnow().isoformat()
+            }
         ]
-    except Exception as e:
-        logger.error(f"Error fetching history: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.info(f"Storing {len(messages_to_store)} messages in Supabase for session {session_id} ('{original_filename}').")
+        message_response = supabase.table("messages").insert(messages_to_store).execute()
 
-@app.get("/history/{document_id}")
-async def get_document_history(document_id: int, db: Session = Depends(get_db)):
-    """Get the Q&A history for a specific document."""
-    try:
-        document = db.query(Document).filter(Document.id == document_id).first()
-        if not document:
-            raise HTTPException(status_code=404, detail="Document not found")
-
-        questions = db.query(Question).filter(
-            Question.document_id == document_id
-        ).order_by(Question.timestamp.desc()).all()
+        if not message_response.data:
+            logger.warning(f"Failed to store messages for session {session_id} ('{original_filename}'). Supabase error: {message_response.error.message if message_response.error else 'Unknown'}")
 
         return {
-            "document": {
-                "id": document.id,
-                "filename": document.filename,
-                "uploadDate": document.upload_date,
-                "questionCount": document.question_count
-            },
-            "questions": [
-                {
-                    "id": q.id,
-                    "question": q.question,
-                    "answer": q.answer,
-                    "timestamp": q.timestamp
-                }
-                for q in questions
-            ]
+            "answer": answer,
+            "document_id": question_request.document_id,
+            "session_id": session_id
         }
-    except Exception as e:
-        logger.error(f"Error fetching document history: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/messages/{document_id}")
-async def get_messages(document_id: str, db: Session = Depends(get_db)):
+    except HTTPException as http_exc:
+        logger.warning(f"HTTPException while asking question for doc {question_request.document_id}: {http_exc.detail}", exc_info=True)
+        raise http_exc
+    except Exception as e:
+        logger.error(f"Unexpected error while asking question for doc {question_request.document_id}: '{question_request.question}'", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {str(e)}")
+
+@app.get("/history", response_model=List[DocumentResponse])
+async def get_history_endpoint(fastapi_req: Request):
+    client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
+    logger.info(f"Received request for document history from {client_host}")
     try:
-        chat_message = db.query(ChatMessage).filter(ChatMessage.document_id == document_id).first()
-        if chat_message is None:
+        response = supabase.table("documents").select("id, filename, file_path, text_path, upload_date, metadata").order("upload_date", desc=True).execute()
+        if response.data:
+            logger.info(f"Fetched {len(response.data)} documents from history.")
+            # Parse metadata from JSON string to dict for each document
+            for doc in response.data:
+                if isinstance(doc.get("metadata"), str):
+                    try:
+                        doc["metadata"] = json.loads(doc["metadata"])
+                    except Exception:
+                        doc["metadata"] = {}
+            return response.data
+        else:
+            logger.info("No documents found in history. Supabase response indicates no data.")
+            return [] # Return empty list if no documents
+    except Exception as e:
+        logger.error("Error fetching document history from Supabase", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve document history: {str(e)}")
+
+@app.get("/history/{document_id}", response_model=List[ChatSessionResponse])
+async def get_document_specific_history_endpoint(document_id: int, fastapi_req: Request):
+    client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
+    logger.info(f"Received request for history of document_id: {document_id} from {client_host}")
+    try:
+        doc_check = supabase.table("documents").select("id, filename").eq("id", document_id).maybe_single().execute()
+        if not doc_check.data:
+            logger.warning(f"Document with id {document_id} not found for history retrieval.")
+            raise HTTPException(status_code=404, detail=f"Document with id {document_id} not found.")
+        original_filename = doc_check.data.get("filename", f"DocumentID_{document_id}")
+        logger.info(f"Found document '{original_filename}' for history retrieval.")
+
+        sessions_response = supabase.table("chat_sessions").select("id, created_at, document_id").eq("document_id", document_id).order("created_at", desc=True).execute()
+        
+        if not sessions_response.data:
+            logger.info(f"No chat sessions found for document '{original_filename}' (id: {document_id}).")
             return []
-        return json.loads(chat_message.messages)
-    except Exception as e:
-        logger.error(f"Error fetching messages: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/messages/{document_id}")
-async def save_messages(document_id: str, message_list: MessageList, db: Session = Depends(get_db)):
-    try:
-        # Create or update the messages for this document
-        chat_message = ChatMessage(
-            document_id=document_id,
-            messages=json.dumps([msg.dict() for msg in message_list.messages])
-        )
-        db.merge(chat_message)
-        db.commit()
-        return {"status": "success"}
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error saving messages: {str(e)}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        chat_sessions_with_messages = []
+        for session in sessions_response.data:
+            logger.debug(f"Fetching messages for session {session['id']} of document '{original_filename}'.")
+            messages_response = supabase.table("messages").select("id, session_id, role, content, created_at").eq("session_id", session['id']).order("created_at", desc=False).execute()
+            
+            messages_data = messages_response.data if messages_response.data else []
+            logger.debug(f"Fetched {len(messages_data)} messages for session {session['id']}.")
+            
+            session_data = ChatSessionResponse(
+                id=session['id'],
+                document_id=session['document_id'],
+                created_at=session['created_at'],
+                messages=messages_data
+            )
+            chat_sessions_with_messages.append(session_data)
+        
+        logger.info(f"Fetched {len(chat_sessions_with_messages)} chat sessions with messages for document '{original_filename}' (id: {document_id}).")
+        return chat_sessions_with_messages
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    except HTTPException as http_exc:
+        logger.warning(f"HTTPException during history retrieval for doc {document_id}: {http_exc.detail}", exc_info=True)
+        raise http_exc
+    except Exception as e:
+        logger.error(f"Error fetching history for document_id {document_id}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve history for document {document_id}: {str(e)}")
+
+# To run directly for development (though `uvicorn main:app --reload` is better for dev)
+# if __name__ == "__main__":
+#     import uvicorn
+#     logger.info(f"Starting Uvicorn server directly from main.py on {API_HOST}:{API_PORT}")
+#     # Ensure LOGGING_CONFIG from uvicorn.config is used or provide a custom one for richer logs
+#     uvicorn.run(app, host=API_HOST, port=API_PORT, log_level="info") # Standard log level
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
+        "http://localhost:5176",
+        "http://127.0.0.1:5176",
+        "https://jo-speaks.vercel.app"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

@@ -1,19 +1,17 @@
 import React from "react";
+import { Button } from "../Button";
 
 interface UploadErrorProps {
-  errorMessage: string;
-  onTryAgain: () => void;
+  error: string;
+  onReset: () => void;
 }
 
-const UploadError: React.FC<UploadErrorProps> = ({
-  errorMessage,
-  onTryAgain,
-}) => {
+export const UploadError: React.FC<UploadErrorProps> = ({ error, onReset }) => {
   return (
-    <div className="flex flex-col items-center space-y-2 w-full">
-      <div className="p-2 rounded-full bg-red-100">
+    <div className="text-center">
+      <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
         <svg
-          className="h-5 w-5 text-red-600"
+          className="h-6 w-6 text-red-600"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -26,16 +24,13 @@ const UploadError: React.FC<UploadErrorProps> = ({
           />
         </svg>
       </div>
-      <p className="text-xs text-red-600">{errorMessage}</p>
-      <button
-        type="button"
-        onClick={onTryAgain}
-        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-      >
-        Try Again
-      </button>
+      <h3 className="mt-2 text-lg font-medium text-gray-900">Upload Failed</h3>
+      <p className="mt-1 text-sm text-gray-600">{error}</p>
+      <div className="mt-4">
+        <Button onClick={onReset} variant="outline">
+          Try Again
+        </Button>
+      </div>
     </div>
   );
 };
-
-export default UploadError;

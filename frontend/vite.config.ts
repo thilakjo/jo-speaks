@@ -10,16 +10,20 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5174,
+    port: 5173,
     proxy: {
       "/api": {
-        target: process.env.VITE_API_URL || "http://localhost:8000",
+        target: "http://localhost:8000",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
     },
   },
   define: {
-    "process.env": process.env,
+    "process.env": {
+      VITE_SUPABASE_URL: JSON.stringify(process.env.VITE_SUPABASE_URL),
+      VITE_SUPABASE_KEY: JSON.stringify(process.env.VITE_SUPABASE_KEY),
+      VITE_API_URL: JSON.stringify(process.env.VITE_API_URL),
+    },
   },
 });

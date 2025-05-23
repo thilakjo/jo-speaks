@@ -1,12 +1,81 @@
-# React + Vite
+# Jo Jo Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Overview
 
-Currently, two official plugins are available:
+Jo Jo is a PDF-whispering bestie! This frontend is built with React, TypeScript, and Tailwind CSS, optimized for performance and production.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## Expanding the ESLint configuration
+- PDF upload with progress tracking
+- Document history with lazy-loaded components
+- Real-time chat interface
+- Responsive design with Tailwind CSS
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Performance Optimizations
+
+- React.memo and useCallback for component memoization
+- React.lazy and Suspense for code splitting
+- Tailwind CSS purge for minimal CSS bundle
+- TypeScript for type safety and better developer experience
+
+## Setup
+
+1. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+2. Start development server:
+
+   ```bash
+   npm run dev
+   ```
+
+3. Build for production:
+   ```bash
+   npm run build
+   ```
+
+## Project Structure
+
+```
+src/
+├── App.tsx
+├── config.ts
+├── env.d.ts
+├── hooks/
+│   └── useUpload.ts
+├── index.css
+├── lib/
+│   ├── supabase.ts
+│   └── utils.ts
+├── main.tsx
+├── components/
+│   └── ui/
+│       ├── Button.tsx
+│       ├── Card.tsx
+│       ├── ChatPanel.tsx
+│       ├── HistorySidebar.tsx
+│       ├── UploadCard.tsx
+│       └── upload-states/
+│           ├── UploadEmpty.tsx
+│           ├── UploadError.tsx
+│           ├── UploadProgress.tsx
+│           └── UploadSuccess.tsx
+├── __tests__/
+│   └── App.test.tsx
+├── services/
+│   └── api.ts
+```
+
+## Configuration
+
+- `tailwind.config.js`: Tailwind CSS configuration with purge
+- `postcss.config.js`: PostCSS configuration for Tailwind
+- `package.json`: Project metadata and dependencies
+- `index.html`: HTML entry point with correct title
+
+## Deployment
+
+Ready for Vercel deployment with optimized build and minimal bundle size.
