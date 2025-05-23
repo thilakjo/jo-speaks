@@ -102,14 +102,6 @@ export const uploadFiles = async (
   });
 };
 
-// DEPRECATED: Use uploadFiles for multi-file support
-export const uploadFile = async (
-  file: File,
-  onProgress?: (progress: number) => void
-): Promise<UploadResult[]> => {
-  return uploadFiles([file], onProgress);
-};
-
 export const askQuestion = async (
   documentId: string,
   question: string
