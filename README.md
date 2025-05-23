@@ -190,3 +190,5 @@ The script will attempt to load variables from a `.env` file in the project root
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+dummy line added
