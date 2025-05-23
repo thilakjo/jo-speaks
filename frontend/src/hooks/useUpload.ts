@@ -1,5 +1,4 @@
 import { useState, useCallback } from "react";
-import { uploadFile } from "../services/api";
 import { API_URL } from "../config";
 
 export const useUpload = () => {

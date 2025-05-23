@@ -2,10 +2,6 @@ import React, { useCallback } from "react";
 import { useUpload } from "../../hooks/useUpload.ts";
 import { Card } from "./Card";
 import { Button } from "./Button";
-import { UploadEmpty } from "./upload-states/UploadEmpty";
-import { UploadProgress } from "./upload-states/UploadProgress";
-import { UploadSuccess } from "./upload-states/UploadSuccess";
-import { UploadError } from "./upload-states/UploadError";
 import { useError } from "./ErrorContext";
 import { useDropzone } from "react-dropzone";
 
@@ -21,14 +17,6 @@ export const UploadCard = React.memo(
       resetUpload,
     } = useUpload();
     const { setError } = useError();
-
-    const onFileChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        setError(null);
-        handleFileChange(e);
-      },
-      [handleFileChange, setError]
-    );
 
     const onUpload = useCallback(async () => {
       setError(null);
@@ -70,11 +58,15 @@ export const UploadCard = React.memo(
           }`}
         >
           <input {...getInputProps()} />
-          <UploadEmpty multiple />
-          {isDragActive && (
-            <p className="text-blue-600 mt-2">Drop the files here ...</p>
-          )}
+          <div className="text-center">
+            <p className="text-gray-600">
+              {isDragActive
+                ? "Drop the files here..."
+                : "Drag & drop PDF files here, or click to select"}
+            </p>
+          </div>
         </div>
+
         {files.length > 0 && (
           <div className="mb-4">
             <h4 className="font-semibold mb-2">Selected Files:</h4>
@@ -87,13 +79,41 @@ export const UploadCard = React.memo(
             </ul>
           </div>
         )}
+
         {typeof progress.total === "number" &&
           progress.total < 100 &&
-          !error && <UploadProgress progress={progress.total} />}
+          !error && (
+            <div className="mb-4">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div
+                  className="bg-blue-600 h-2.5 rounded-full"
+                  style={{ width: `${progress.total}%` }}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                Uploading... {Math.round(progress.total)}%
+              </p>
+            </div>
+          )}
+
         {results.length > 0 && !error && (
-          <UploadSuccess onReset={onReset} results={results} />
+          <div className="mb-4 p-4 bg-green-50 rounded-lg">
+            <p className="text-green-700 font-medium">Upload complete!</p>
+            <Button onClick={onReset} className="mt-2" variant="outline">
+              Upload Another File
+            </Button>
+          </div>
         )}
-        {error && <UploadError error={error} onReset={onReset} />}
+
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 rounded-lg">
+            <p className="text-red-700">{error}</p>
+            <Button onClick={onReset} className="mt-2" variant="outline">
+              Try Again
+            </Button>
+          </div>
+        )}
+
         {files.length > 0 &&
           (!progress.total || progress.total < 100) &&
           !error && (
