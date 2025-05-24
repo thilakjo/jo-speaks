@@ -13,7 +13,7 @@ from typing import Dict, Optional, List
 import logging
 import traceback
 import google.generativeai as genai  # Gemini AI for local magic
-from config import supabase, UPLOAD_DIR, TEXT_DIR, API_PORT, API_HOST, ALLOWED_ORIGINS, GOOGLE_API_KEY, GEMINI_MODEL
+from config import supabase, supabase_admin, UPLOAD_DIR, TEXT_DIR, API_PORT, API_HOST, ALLOWED_ORIGINS, GOOGLE_API_KEY, GEMINI_MODEL
 import json
 from io import BytesIO
 from uuid import uuid4
@@ -299,6 +299,9 @@ async def get_history_endpoint(fastapi_req: Request):
                         doc["metadata"] = json.loads(doc["metadata"])
                     except Exception:
                         doc["metadata"] = {}
+                # Patch: ensure id is always a string for Pydantic
+                if "id" in doc:
+                    doc["id"] = str(doc["id"])
             return response.data
         else:
             logger.info("No documents found in history. Supabase response indicates no data.")
@@ -350,12 +353,14 @@ async def clear_all_data_endpoint(secret: str = "admin123"):  # Simple secret fo
     """Danger zone! This deletes all documents, chats, and files. Use with care!"""
     if secret != "admin123":
         raise HTTPException(status_code=403, detail="Forbidden")
+    # Use supabase_admin for full delete rights
+    admin = supabase_admin if supabase_admin else supabase
     # Delete all messages
-    supabase.table("messages").delete().neq("id", 0).execute()
+    admin.table("messages").delete().neq("id", -1).execute()
     # Delete all chat sessions
-    supabase.table("chat_sessions").delete().neq("id", 0).execute()
+    admin.table("chat_sessions").delete().neq("id", -1).execute()
     # Delete all documents
-    supabase.table("documents").delete().neq("id", 0).execute()
+    admin.table("documents").delete().neq("id", -1).execute()
     # Remove all files from uploads and texts
     for folder in [UPLOAD_DIR, TEXT_DIR]:
         for filename in os.listdir(folder):

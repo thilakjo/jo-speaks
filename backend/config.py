@@ -19,21 +19,31 @@ load_dotenv()
 
 # Supabase Configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 logger.info(f"Attempting to load Supabase URL: {SUPABASE_URL}")
-logger.info(f"Supabase Key loaded: {bool(SUPABASE_KEY)}")
+logger.info(f"Supabase Anon Key loaded: {bool(SUPABASE_ANON_KEY)}")
+logger.info(f"Supabase Service Role Key loaded: {bool(SUPABASE_SERVICE_ROLE_KEY)}")
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    logger.error("CRITICAL: Missing Supabase URL or Key. Application cannot start.")
+if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    logger.error("CRITICAL: Missing Supabase URL or Anon Key. Application cannot start.")
     raise ValueError("Missing Supabase environment variables. Check .env file and loading.")
 
 try:
-    # Initialize Supabase client
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    # Initialize Supabase client (anon)
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+    # Initialize Supabase admin client (service role)
+    supabase_admin: Client = None
+    if SUPABASE_SERVICE_ROLE_KEY:
+        supabase_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     # Test connection
     response = supabase.table("documents").select("id").limit(1).execute()
     logger.info("Supabase client initialized and connection tested successfully.")
+    if supabase_admin:
+        logger.info("Supabase admin client initialized successfully.")
+    else:
+        logger.warning("Supabase admin client not initialized. Admin endpoints may not work.")
 except Exception as e:
     logger.error(f"Failed to initialize Supabase client: {str(e)}", exc_info=True)
     raise
