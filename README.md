@@ -1,163 +1,105 @@
-# Jo Speaks: PDF Q&A with Supabase, FastAPI, Vite/React, and Gemini AI
+# Hey there! 👋 I'm Jo Jo, your PDF Q&A Sidekick
 
-**🚀 One-liner setup:**
+Welcome to my home! I'm Thilak's little project for chatting with your PDFs, powered by Supabase, FastAPI, Vite/React, and a sprinkle of Gemini magic. If you've ever wished you could just _ask_ a document a question, you're in the right place.
+
+---
+
+## What's This All About?
+
+I let you upload PDFs, then you can ask questions about them—like "What's the main point of this doc?" or "When's the deadline?" I'll read, remember, and answer, all while keeping your files safe in Supabase. (And yes, I use Google Gemini for the smart stuff, but only locally for now.)
+
+---
+
+## 🚀 Getting Started (Jo Jo Style)
+
+**Step 1: Clone Me!**
 
 ```bash
-git clone https://github.com/thilakjo/jo-speaks.git && cd jo-speaks && docker-compose up --build
+git clone https://github.com/thilakjo/jo-speaks.git && cd jo-speaks
 ```
 
-> No need to manually copy .env—Docker will do it for you if you forget!
+**Step 2: Fire Up Docker (Easiest Way)**
 
-**Live site:** [thilakjo.com](https://thilakjo.com)
-**Repo:** [github.com/thilakjo/jo-speaks](https://github.com/thilakjo/jo-speaks)
+```bash
+docker-compose up --build
+```
 
----
+_Pro tip: No need to mess with .env files—Docker will set it up for you!_
 
-## Features
+**Step 3: Open Your Browser**
 
-- Upload PDFs, extract text, and ask questions about them
-- All data stored in Supabase (documents, chat sessions, messages)
-- FastAPI backend, Vite/React frontend
-- **Gemini AI (Google Generative AI) enabled locally** for answering questions
-- CORS and monorepo Vercel deployment ready
+- Head to [http://localhost:5173](http://localhost:5173)
+- Upload a PDF, ask away, and watch the magic happen!
 
 ---
 
-## 🚀 Quickstart (Local)
+## Want to Tinker Locally? (No Docker)
 
-1. **Clone the repo:**
-   ```bash
-   git clone https://github.com/thilakjo/jo-speaks.git
-   cd jo-speaks
-   ```
-2. **Set up environment:**
-   ```bash
-   cp .env.example .env
-   # Edit .env and fill in your Supabase and Google Gemini keys
-   ```
-3. **Install backend:**
+1. **Set up Python & Node:**
+
    ```bash
    python -m venv .venv
    source .venv/bin/activate
    pip install -r backend/requirements.txt
+   cd frontend && npm install && cd ..
    ```
-4. **Install frontend:**
-   ```bash
-   cd frontend
-   npm install
-   cd ..
-   ```
-5. **Run backend:**
+
+2. **Start the backend:**
+
    ```bash
    uvicorn backend/api/index:app --reload --port 8000
    ```
-6. **Run frontend:**
+
+3. **Start the frontend:**
+
    ```bash
    cd frontend
    npm run dev
    ```
-7. **Visit:** [http://localhost:5173](http://localhost:5173) (or 5174, etc.)
+
+4. **Visit:** [http://localhost:5173](http://localhost:5173)
 
 ---
 
-## 🐳 Docker Quickstart
+## Environment Stuff
 
-1. **Clone the repo and set up .env:**
-   ```bash
-   git clone https://github.com/thilakjo/jo-speaks.git
-   cd jo-speaks
-   cp .env.example .env
-   # Edit .env and fill in your Supabase and Google Gemini keys
-   ```
-2. **Build and run everything:**
-   ```bash
-   docker-compose up --build
-   ```
-3. **Visit:**
-   - Frontend: [http://localhost:5173](http://localhost:5173)
-   - Backend: [http://localhost:8000/api/health](http://localhost:8000/api/health)
-
-- Uploaded files and extracted texts are persisted in `backend/uploads` and `backend/texts`.
+- All the keys you need are in `.env.example` (already filled in for you!).
+- If you want to use your own Supabase or Gemini keys, just edit `.env`.
 
 ---
 
-## 🐳 Docker Troubleshooting
+## Endpoints (For the Curious)
 
-- If the frontend shows `net::ERR_CONNECTION_REFUSED` for API calls, the backend container is not running or crashed.
-- To check backend logs:
-  ```bash
-  docker-compose logs backend
-  ```
-- If you edit `.env`, always rebuild:
-  ```bash
-  docker-compose down
-  docker-compose up --build
-  ```
-- If you see `ModuleNotFoundError` or missing dependencies, ensure `google-generativeai` is in `backend/requirements.txt` and rebuild.
-- If you see port conflicts, stop any local server on 8000 before running Docker Compose.
-- The backend healthcheck will ensure the frontend waits for the backend to be up.
+- `POST /api/upload` – Send me your PDFs!
+- `GET /api/history` – See what you've uploaded.
+- `POST /api/ask` – Ask me anything about your docs.
+- `GET /api/health` – Check if I'm feeling okay.
 
 ---
 
-## .env Example
+## Pro Tips
 
-```env
-# Supabase
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-
-# Google Gemini
-GOOGLE_API_KEY=your_google_api_key  # Get from https://makersuite.google.com/app/apikey
-
-# API
-API_PORT=8000
-API_HOST=0.0.0.0
-
-# Frontend
-VITE_API_URL=http://localhost:8000/api
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_KEY=your_supabase_anon_key
-```
+- Keep your PDFs under 50MB for the fastest answers.
+- If you see "Invalid URL" errors, double-check your `.env` file.
+- Want to use your own Supabase? Swap out the keys in `.env`.
 
 ---
 
-## Troubleshooting
+## Changelog
 
-- **Gemini not answering?**
-  - Check your `GOOGLE_API_KEY` in `.env`
-  - Check backend logs for Gemini errors
-  - **If you see `ModuleNotFoundError: No module named 'google'` in Docker, make sure `google-generativeai` is in `backend/requirements.txt` and run:**
-    ```bash
-    docker-compose build --no-cache
-    docker-compose up
-    ```
-- **Supabase errors?**
-  - Check your Supabase keys and table setup
-- **CORS errors?**
-  - Make sure frontend uses `VITE_API_URL=http://localhost:8000/api`
-
----
-
-## Vercel Deployment
-
-- Gemini AI is **disabled** on Vercel (due to cold start and size limits)
-- All endpoints are namespaced under `/api` for correct routing
-- See `vercel.json` for monorepo build setup
+- **v3.2** – Gave Jo Jo a friendlier voice, made onboarding a breeze, and sprinkled in more helpful comments.
+- **v3.1** – Cleaned up those pesky scrollbars and added more fun Jo Jo comments.
+- **v3.0** – Docker support! Now anyone can run me with a single command.
+- **v2.0** – Gemini support for local Q&A.
+- **v1.0** – I was born! PDF uploads, chat, and history.
 
 ---
 
 ## Credits
 
-- Built with FastAPI, Vite, React, Supabase, and Google Gemini AI
-- Maintained by [thilakjo.com](https://thilakjo.com)
+Made with ☕, late nights, and lots of curiosity by [Thilak](https://thilakjo.com).  
+If you get stuck, just open an issue or ping me!
 
-> **IMPORTANT:**
->
-> - `.env.example` is prefilled with working Supabase and Gemini API keys. If you want a working demo, just run:
->   ```bash
->   cp .env.example .env
->   docker-compose up --build
->   ```
-> - **Do NOT edit `.env` unless you want to use your own Supabase or Gemini keys.**
-> - If you see `Invalid URL` or backend crashes, your `.env` is missing or has placeholder values.
+---
+
+_Happy chatting with your PDFs! – Jo Jo_

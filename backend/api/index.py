@@ -1,4 +1,4 @@
-# Trigger redeploy: ensure Vercel uses FastAPI serverless function
+# Hey, welcome to Jo Jo's PDF Q&A backend! Let's keep things friendly and clear.
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,38 +11,38 @@ from datetime import datetime
 from typing import Dict, Optional, List
 import logging
 import traceback
-import google.generativeai as genai  # ENABLED for local Gemini support
-from config import supabase, UPLOAD_DIR, TEXT_DIR, API_PORT, API_HOST, ALLOWED_ORIGINS, GOOGLE_API_KEY, GEMINI_MODEL  # Import GOOGLE_API_KEY, GEMINI_MODEL
+import google.generativeai as genai  # Gemini for local Q&A
+from config import supabase, UPLOAD_DIR, TEXT_DIR, API_PORT, API_HOST, ALLOWED_ORIGINS, GOOGLE_API_KEY, GEMINI_MODEL
 import json
 from io import BytesIO
 
-# Use the logger configured in config.py (uvicorn.error)
+# Grab the logger so we can chat in the logs
 logger = logging.getLogger("uvicorn.error")
 
-# FastAPI app setup
-app = FastAPI(title="PDF Q&A API")
+# Let's spin up our FastAPI app!
+app = FastAPI(title="Jo Jo PDF Q&A API")
 
-# Create directories if they don't exist (idempotent)
-for directory in [UPLOAD_DIR, TEXT_DIR]:
-    os.makedirs(directory, exist_ok=True)
-    logger.info(f"Ensured directory exists: {directory}")
+# Make sure our folders are cozy and ready
+for folder in [UPLOAD_DIR, TEXT_DIR]:
+    os.makedirs(folder, exist_ok=True)
+    logger.info(f"(Jo Jo) Made sure folder exists: {folder}")
 
-# Gemini/GPT configuration and usage is enabled for local development
+# Gemini setup (only if you gave me a key!)
 llm = None
 if GOOGLE_API_KEY:
     try:
-        logger.info(f"Configuring Google API with key: {'present' if GOOGLE_API_KEY else 'MISSING!'}")
+        logger.info(f"(Jo Jo) Setting up Gemini with your API key.")
         genai.configure(api_key=GOOGLE_API_KEY)
-        logger.info(f"Initializing Gemini model: {GEMINI_MODEL}")
+        logger.info(f"(Jo Jo) Using Gemini model: {GEMINI_MODEL}")
         llm = genai.GenerativeModel(GEMINI_MODEL)
-        logger.info("LLM (Gemini) initialized successfully.")
+        logger.info("(Jo Jo) Gemini is ready to answer questions!")
     except Exception as e:
-        logger.error(f"Failed to initialize Gemini model: {str(e)}")
+        logger.error(f"(Jo Jo) Oops, Gemini setup failed: {str(e)}")
         llm = None
 else:
-    logger.warning("GOOGLE_API_KEY not set. Gemini AI will be disabled.")
+    logger.warning("(Jo Jo) No Google API key found. Gemini Q&A is off.")
 
-# Pydantic Models (request/response schemas)
+# --- Models ---
 class QuestionRequest(BaseModel):
     document_id: int
     question: str
@@ -52,9 +52,8 @@ class DocumentResponse(BaseModel):
     filename: str
     file_path: str
     text_path: str
-    upload_date: str  # ISO format string
+    upload_date: str  # When did we get this doc?
     metadata: dict
-
     class Config:
         from_attributes = True
 
@@ -63,53 +62,52 @@ class MessageResponse(BaseModel):
     session_id: int
     role: str
     content: str
-    created_at: str  # ISO format string
-
+    created_at: str  # When was this message sent?
     class Config:
         from_attributes = True
 
 class ChatSessionResponse(BaseModel):
     id: int
     document_id: int
-    created_at: str  # ISO format string
+    created_at: str  # When did this chat start?
     messages: List[MessageResponse]
-
     class Config:
         from_attributes = True
 
-# Helper functions
-def extract_text_from_pdf_bytes(pdf_bytes: bytes, original_filename: str) -> str:
-    logger.info(f"Extracting text from PDF bytes for: {original_filename}")
+# --- Helper functions ---
+def pull_text_from_pdf(pdfBytes: bytes, originalName: str) -> str:
+    logger.info(f"(Jo Jo) Pulling text from: {originalName}")
     try:
-        reader = PdfReader(BytesIO(pdf_bytes))
-        text = ""
+        reader = PdfReader(BytesIO(pdfBytes))
+        all_text = ""
         for i, page in enumerate(reader.pages):
             page_text = page.extract_text()
             if page_text:
-                text += page_text
+                all_text += page_text
             else:
-                logger.warning(f"Page {i+1} of {original_filename} had no extractable text.")
-        if not text:
-            logger.warning(f"No text extracted from {original_filename}. It might be an image-based PDF or empty.")
-        logger.info(f"Extracted {len(text)} characters from PDF: {original_filename}")
-        return text
-    except Exception as e:
-        logger.error(f"Error extracting text from PDF bytes for {original_filename}", exc_info=e)
-        raise ValueError(f"Could not extract text from PDF: {original_filename}") from e
+                logger.warning(f"(Jo Jo) Page {i+1} of {originalName} had no text.")
+        if not all_text:
+            logger.warning(f"(Jo Jo) No text found in {originalName}. Maybe it's a scanned image?")
+        logger.info(f"(Jo Jo) Got {len(all_text)} characters from {originalName}")
+        return all_text
+    except Exception as oops:
+        logger.error(f"(Jo Jo) Trouble reading {originalName}", exc_info=oops)
+        raise ValueError(f"Couldn't read text from PDF: {originalName}") from oops
 
-def save_text_to_file(text: str, filename_base: str) -> str:
-    safe_filename_base = "".join(c if c.isalnum() or c in ('.', '-', '_') else '_' for c in filename_base)
-    text_filename = f"{safe_filename_base}.txt"
-    text_path = os.path.join(TEXT_DIR, text_filename)
-    logger.info(f"Saving extracted text to: {text_path}")
+def jot_down_text(text: str, baseName: str) -> str:
+    # Let's make a safe filename for our notes
+    safe_name = "".join(c if c.isalnum() or c in ('.', '-', '_') else '_' for c in baseName)
+    note_filename = f"{safe_name}.txt"
+    note_path = os.path.join(TEXT_DIR, note_filename)
+    logger.info(f"(Jo Jo) Writing out text to: {note_path}")
     try:
-        with open(text_path, "w", encoding="utf-8") as file:
-            file.write(text)
-        logger.info(f"Text saved successfully to: {text_path}")
-        return text_path
-    except Exception as e:
-        logger.error(f"Error saving text to file {text_path}", exc_info=e)
-        raise IOError(f"Could not save text to file: {text_path}") from e
+        with open(note_path, "w", encoding="utf-8") as note_file:
+            note_file.write(text)
+        logger.info(f"(Jo Jo) All done! Text saved to: {note_path}")
+        return note_path
+    except Exception as oops:
+        logger.error(f"(Jo Jo) Trouble saving text to {note_path}", exc_info=oops)
+        raise IOError(f"Couldn't save text to file: {note_path}") from oops
 
 @app.get("/api/health")
 async def health_check_endpoint(fastapi_req: Request):
@@ -173,10 +171,10 @@ async def upload_pdf_endpoint(fastapi_req: Request, files: List[UploadFile] = Fi
             with open(pdf_file_path, "wb") as buffer:
                 buffer.write(pdf_bytes)
             logger.info(f"File '{file.filename}' (size: {len(pdf_bytes)} bytes) saved as {saved_pdf_filename}")
-            extracted_text = extract_text_from_pdf_bytes(pdf_bytes, file.filename)
+            extracted_text = pull_text_from_pdf(pdf_bytes, file.filename)
             if not extracted_text.strip():
                 logger.warning(f"Extracted text for '{file.filename}' is empty or only whitespace. Document might be image-based or content is not extractable.")
-            text_file_path = save_text_to_file(extracted_text, f"{safe_original_filename_base}_{unique_id}")
+            text_file_path = jot_down_text(extracted_text, f"{safe_original_filename_base}_{unique_id}")
             document_data = {
                 "filename": file.filename,
                 "file_path": pdf_file_path,
