@@ -73,6 +73,24 @@
 
 ---
 
+## 🐳 Docker Troubleshooting
+
+- If the frontend shows `net::ERR_CONNECTION_REFUSED` for API calls, the backend container is not running or crashed.
+- To check backend logs:
+  ```bash
+  docker-compose logs backend
+  ```
+- If you edit `.env`, always rebuild:
+  ```bash
+  docker-compose down
+  docker-compose up --build
+  ```
+- If you see `ModuleNotFoundError` or missing dependencies, ensure `google-generativeai` is in `backend/requirements.txt` and rebuild.
+- If you see port conflicts, stop any local server on 8000 before running Docker Compose.
+- The backend healthcheck will ensure the frontend waits for the backend to be up.
+
+---
+
 ## .env Example
 
 ```env

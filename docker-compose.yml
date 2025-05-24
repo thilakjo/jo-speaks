@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   backend:
     build: ./backend
@@ -9,6 +8,11 @@ services:
     volumes:
       - ./backend/uploads:/app/uploads
       - ./backend/texts:/app/texts
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   frontend:
     build: ./frontend
     env_file:
@@ -16,4 +20,5 @@ services:
     ports:
       - "5173:5173"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
