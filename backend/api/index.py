@@ -109,7 +109,7 @@ def save_text_to_file(text: str, filename_base: str) -> str:
         logger.error(f"Error saving text to file {text_path}", exc_info=e)
         raise IOError(f"Could not save text to file: {text_path}") from e
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check_endpoint(fastapi_req: Request):
     client_host = fastapi_req.client.host if fastapi_req.client else "unknown"
     logger.info(f"Health check requested from {client_host}")
@@ -144,7 +144,7 @@ async def health_check_endpoint(fastapi_req: Request):
         }
     }
 
-@app.post("/upload")
+@app.post("/api/upload")
 async def upload_pdf_endpoint(fastapi_req: Request, files: List[UploadFile] = File(...)):
     client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
     logger.info(f"Received multi-upload request for {len(files)} files from {client_host}")
@@ -213,7 +213,7 @@ async def upload_pdf_endpoint(fastapi_req: Request, files: List[UploadFile] = Fi
     logger.info(f"Upload results: {results}")
     return results
 
-@app.post("/ask")
+@app.post("/api/ask")
 async def ask_question_endpoint(fastapi_req: Request, question_request: QuestionRequest):
     client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
     logger.info(f"Received question for document {question_request.document_id} from {client_host}: '{question_request.question}'")
@@ -295,7 +295,7 @@ async def ask_question_endpoint(fastapi_req: Request, question_request: Question
         logger.error(f"Unexpected error while asking question for doc {question_request.document_id}: '{question_request.question}'", exc_info=True)
         raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {str(e)}")
 
-@app.get("/history", response_model=List[DocumentResponse])
+@app.get("/api/history", response_model=List[DocumentResponse])
 async def get_history_endpoint(fastapi_req: Request):
     client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
     logger.info(f"Received request for document history from {client_host}")
@@ -318,7 +318,7 @@ async def get_history_endpoint(fastapi_req: Request):
         logger.error("Error fetching document history from Supabase", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to retrieve document history: {str(e)}")
 
-@app.get("/history/{document_id}", response_model=List[ChatSessionResponse])
+@app.get("/api/history/{document_id}", response_model=List[ChatSessionResponse])
 async def get_document_specific_history_endpoint(document_id: int, fastapi_req: Request):
     client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
     logger.info(f"Received request for history of document_id: {document_id} from {client_host}")

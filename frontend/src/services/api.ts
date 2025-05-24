@@ -106,6 +106,7 @@ export const askQuestion = async (
   documentId: string,
   question: string
 ): Promise<AskResponse> => {
+  console.log("[API] POST", `${API_URL}/ask`);
   return fetchApi<AskResponse>("/ask", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -114,11 +115,13 @@ export const askQuestion = async (
 };
 
 export const getHistory = async (): Promise<DocumentHistoryInfo[]> => {
+  console.log("[API] GET", `${API_URL}/history`);
   return fetchApi<DocumentHistoryInfo[]>("/history");
 };
 
 export const getDocumentHistory = async (
   documentId: string
 ): Promise<ChatSession[]> => {
+  console.log("[API] GET", `${API_URL}/history/${documentId}`);
   return fetchApi<ChatSession[]>(`/history/${documentId}`);
 };

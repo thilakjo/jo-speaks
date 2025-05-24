@@ -30,7 +30,7 @@ fi
 
 echo "INFO: Starting backend server for tests..."
 # Start backend in the background
-python -m uvicorn main:app --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8000} --log-level warning & # Use warning to reduce noise
+python -m uvicorn api.index:app --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8000} --log-level warning & # Use warning to reduce noise
 UVICORN_PID=$!
 echo "INFO: Backend server started with PID: $UVICORN_PID. Waiting a few seconds for it to initialize..."
 sleep 5 # Give server time to start, especially with startup events

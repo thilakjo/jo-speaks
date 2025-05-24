@@ -35,6 +35,7 @@ export const useUpload = () => {
       const formData = new FormData();
       files.forEach((file) => formData.append("files", file));
       const xhr = new XMLHttpRequest();
+      console.log("[API] POST", `${API_URL}/upload`);
       return await new Promise<any[]>((resolve, reject) => {
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable) {
