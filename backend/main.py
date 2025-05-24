@@ -1,3 +1,4 @@
+# Trigger redeploy: ensure Vercel uses FastAPI serverless function
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
