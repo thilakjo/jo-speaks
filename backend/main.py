@@ -359,20 +359,13 @@ async def get_document_specific_history_endpoint(document_id: int, fastapi_req: 
         logger.error(f"Error fetching history for document_id {document_id}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to retrieve history for document {document_id}: {str(e)}")
 
-# To run directly for development (though `uvicorn main:app --reload` is better for dev)
-# if __name__ == "__main__":
-#     import uvicorn
-#     logger.info(f"Starting Uvicorn server directly from main.py on {API_HOST}:{API_PORT}")
-#     # Ensure LOGGING_CONFIG from uvicorn.config is used or provide a custom one for richer logs
-#     uvicorn.run(app, host=API_HOST, port=API_PORT, log_level="info") # Standard log level
+@app.get("/api/health")
+def health():
+    return {"status": "ok"}
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://jo-speaks-frontend.vercel.app"
-    ],
+    allow_origins=["*"],  # For production, restrict to your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
