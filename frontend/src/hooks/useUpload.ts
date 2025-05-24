@@ -1,103 +1,95 @@
+// This is Jo Jo's upload hook – your friendly helper for uploading PDFs. Handles errors, progress, and all the little details. 🦜
 import { useState, useCallback } from "react";
 import { API_URL } from "../config";
 
 // Jo Jo's PDF upload helper – let's make file uploads a breeze!
 export const useUpload = () => {
-  // PDFs the user picked out
-  const [selectedPdfs, setSelectedPdfs] = useState<File[]>([]);
-  // Track upload progress for each file
-  const [uploadProgress, setUploadProgress] = useState<{
-    [filename: string]: number;
-  }>({});
-  // Store results from the backend after upload
-  const [uploadResults, setUploadResults] = useState<any[]>([]);
-  // If anything goes wrong, I'll let you know here
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  // The files the user wants to upload
+  const [files, setFiles] = useState<File[]>([]);
+  // Upload progress for each file
+  const [progress, setProgress] = useState<{ [filename: string]: number }>({});
+  // Results from the server
+  const [results, setResults] = useState<any[]>([]);
+  // Any error messages
+  const [error, setError] = useState<string | null>(null);
 
-  // When the user picks files, let's check they're all PDFs and reset state
-  const onPdfFileChange = useCallback(
+  // When the user picks files, check they're all PDFs and reset state
+  const handleFileChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const pickedFiles = Array.from(e.target.files || []);
-      if (pickedFiles.length > 0) {
-        const notPdf = pickedFiles.find((f) => f.type !== "application/pdf");
-        if (notPdf) {
-          setUploadError("Oops! Please upload only PDF files.");
+      const selectedFiles = Array.from(e.target.files || []);
+      if (selectedFiles.length > 0) {
+        const nonPdf = selectedFiles.find((f) => f.type !== "application/pdf");
+        if (nonPdf) {
+          setError("Oops! Please upload only PDF files.");
           return;
         }
-        setSelectedPdfs(pickedFiles);
-        setUploadError(null);
-        setUploadProgress({});
-        setUploadResults([]);
+        setFiles(selectedFiles);
+        setError(null);
+        setProgress({});
+        setResults([]);
       }
     },
     []
   );
 
-  // Time to send those PDFs to the backend!
-  const onPdfUpload = useCallback(async () => {
-    if (selectedPdfs.length === 0) return;
-    setUploadProgress({});
-    setUploadResults([]);
-    setUploadError(null);
-    try {
-      // Bundle up our PDFs for the trip
-      const uploadForm = new FormData();
-      selectedPdfs.forEach((pdf) => uploadForm.append("files", pdf));
-      const uploadRequest = new XMLHttpRequest();
-      console.log(
-        "[JoJo] Sending your PDFs to the backend at",
-        `${API_URL}/upload`
-      );
-      return await new Promise<any[]>((resolve, reject) => {
-        uploadRequest.upload.addEventListener("progress", (event) => {
-          if (event.lengthComputable) {
-            const percent = (event.loaded / event.total) * 100;
-            setUploadProgress((prev) => ({ ...prev, total: percent }));
-          }
-        });
-        uploadRequest.addEventListener("load", () => {
-          if (uploadRequest.status === 200) {
-            try {
-              const response = JSON.parse(uploadRequest.responseText);
-              setUploadResults(response);
-              resolve(response);
-            } catch (error) {
-              setUploadError("Hmm, the server sent back something weird.");
-              reject(new Error("Invalid response format"));
-            }
-          } else {
-            setUploadError("Upload didn't work. Try again?");
-            reject(new Error("Upload failed"));
-          }
-        });
-        uploadRequest.addEventListener("error", () => {
-          setUploadError("Network hiccup! Please check your connection.");
-          reject(new Error("Network error"));
-        });
-        uploadRequest.open("POST", `${API_URL}/upload`);
-        uploadRequest.send(uploadForm);
-      });
-    } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Upload failed");
-      setUploadProgress({});
+  // Upload the files to the backend
+  const upload = useCallback(async () => {
+    if (files.length === 0) {
+      setError("No files to upload! Please pick a PDF.");
+      return;
     }
-  }, [selectedPdfs]);
+    setError(null);
+    setProgress({});
+    setResults([]);
+    const formData = new FormData();
+    files.forEach((file) => formData.append("files", file));
+    return new Promise<any[]>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable) {
+          const percent = (event.loaded / event.total) * 100;
+          setProgress((prev) => ({ ...prev, total: percent }));
+        }
+      });
+      xhr.addEventListener("load", () => {
+        if (xhr.status === 200) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            setResults(response);
+            resolve(response);
+          } catch (err) {
+            setError("Hmm, the server sent something weird back. Try again?");
+            reject(err);
+          }
+        } else {
+          setError("Upload failed. Maybe try a different PDF?");
+          reject(new Error("Upload failed"));
+        }
+      });
+      xhr.addEventListener("error", () => {
+        setError("Network error. Are you online?");
+        reject(new Error("Network error"));
+      });
+      xhr.open("POST", `${API_URL}/upload`);
+      xhr.send(formData);
+    });
+  }, [files]);
 
-  // Reset everything so the user can start fresh
   const resetUpload = useCallback(() => {
-    setSelectedPdfs([]);
-    setUploadProgress({});
-    setUploadResults([]);
-    setUploadError(null);
+    setFiles([]);
+    setProgress({});
+    setResults([]);
+    setError(null);
   }, []);
 
   return {
-    files: selectedPdfs,
-    progress: uploadProgress,
-    results: uploadResults,
-    error: uploadError,
-    handleFileChange: onPdfFileChange,
-    handleUpload: onPdfUpload,
+    files,
+    setFiles,
+    progress,
+    results,
+    error,
+    handleFileChange,
+    upload,
     resetUpload,
   };
 };

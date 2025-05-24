@@ -1,91 +1,98 @@
-# Hey there! 👋 I'm Jo Jo, your PDF Q&A Sidekick
+# jo-speaks 🦜
 
-Welcome to my home! I'm Thilak's little project for chatting with your PDFs, powered by Supabase, FastAPI, Vite/React, and a sprinkle of Gemini magic. If you've ever wished you could just _ask_ a document a question, you're in the right place.
+Hey there! 👋
 
----
-
-## What's This All About?
-
-I let you upload PDFs, then you can ask questions about them—like "What's the main point of this doc?" or "When's the deadline?" I'll read, remember, and answer, all while keeping your files safe in my cozy local folders. (And yes, I use Google Gemini for the smart stuff, but only locally for now.)
+Welcome to **jo-speaks** – your friendly, open-source PDF Q&A BFF. Upload any PDF, ask questions, and let Jo Jo (that's me!) fetch the answers for you. Whether you're a student, researcher, or just PDF-curious, Jo Jo is here to help you chat with your documents like never before.
 
 ---
 
-## 🚀 Getting Started (Jo Jo Style)
+## 🚀 Features
 
-**Step 1: Clone Me!**
+- **Upload PDFs**: Drag, drop, and store your PDFs with ease.
+- **Ask Anything**: Type your questions and get instant answers from the document's content.
+- **History**: See all your uploaded PDFs and chat history in one place.
+- **Supabase-powered**: All your files and data are securely stored in Supabase.
+- **Gemini AI**: Local Gemini support for smart, context-aware answers.
+- **Modern UI**: Built with React, Vite, and FastAPI for a snappy, beautiful experience.
 
-```bash
-git clone https://github.com/thilakjo/jo-speaks.git && cd jo-speaks
+---
+
+## 🛠️ Getting Started
+
+### 1. Clone the repo
+
+```sh
+git clone https://github.com/yourusername/jo-speaks.git
+cd jo-speaks
 ```
 
-**Step 2: Fire Up Locally (Easiest Way)**
+### 2. Set up your environment
 
-```bash
+- Copy `.env.example` to `.env` and fill in your Supabase and Google API keys.
+- Make sure you have Python 3.11+ and Node.js 18+ installed.
+
+### 3. Start the backend
+
+```sh
+cd backend
 python -m venv .venv
 source .venv/bin/activate
-pip install -r backend/requirements.txt
-cd frontend && npm install && cd ..
+pip install -r requirements.txt
+uvicorn api.index:app --reload --port 8000
 ```
 
-**Step 3: Start the backend:**
+### 4. Start the frontend
 
-```bash
-uvicorn backend/api/index:app --reload --port 8000
-```
-
-**Step 4: Start the frontend:**
-
-```bash
+```sh
 cd frontend
+npm install
 npm run dev
 ```
 
-**Step 5: Open Your Browser**
-
-- Head to [http://localhost:5173](http://localhost:5173)
-- Upload a PDF, ask away, and watch the magic happen!
+- Visit [http://localhost:5173](http://localhost:5173) and meet Jo Jo!
 
 ---
 
-## Environment Stuff
+## 🤖 How It Works
 
-- All the keys you need are in `.env.example` (already filled in for you!).
-- If you want to use your own Supabase or Gemini keys, just edit `.env`.
-
----
-
-## Endpoints (For the Curious)
-
-- `POST /api/upload` – Send me your PDFs!
-- `GET /api/history` – See what you've uploaded.
-- `POST /api/ask` – Ask me anything about your docs.
-- `GET /api/health` – Check if I'm feeling okay.
+- **Upload**: PDFs are sent straight to Supabase Storage and indexed in the database.
+- **Ask**: Your questions are answered using Gemini AI (if configured) or a friendly fallback.
+- **History**: All your uploads and chats are saved, so you can pick up where you left off.
 
 ---
 
-## Pro Tips
+## 📝 FAQ
 
-- Keep your PDFs under 50MB for the fastest answers.
-- If you see "Invalid URL" errors, double-check your `.env` file.
-- Want to use your own Supabase? Swap out the keys in `.env`.
+**Q: Is my data safe?**
 
----
+> Yep! Everything is stored in your own Supabase project. You control the keys.
 
-## Changelog
+**Q: Can I use my own AI model?**
 
-- **v3.2** – Gave Jo Jo a friendlier voice, made onboarding a breeze, and sprinkled in more helpful comments.
-- **v3.1** – Cleaned up those pesky scrollbars and added more fun Jo Jo comments.
-- **v3.0** – Docker support! Now anyone can run me with a single command.
-- **v2.0** – Gemini support for local Q&A.
-- **v1.0** – I was born! PDF uploads, chat, and history.
+> Absolutely! Just swap out the Gemini config in the backend.
 
----
+**Q: Can I deploy this to Vercel/Netlify/wherever?**
 
-## Credits
+> You bet. The app is serverless-friendly and easy to deploy anywhere.
 
-Made with ☕, late nights, and lots of curiosity by [Thilak](https://thilakjo.com).  
-If you get stuck, just open an issue or ping me!
+**Q: Something broke! What do I do?**
+
+> Check the logs, open an issue, or just ask Jo Jo (me) for help. I'm here for you!
 
 ---
 
-_Happy chatting with your PDFs! – Jo Jo_
+## 🦜 About Jo Jo
+
+Jo Jo is your PDF Q&A BFF – always ready to help, never judges your questions, and loves a good PDF. Built with love by [your name here].
+
+---
+
+## 💡 Contributing
+
+Pull requests, issues, and stars are always welcome! If you have ideas, want to add features, or just want to say hi, open an issue or PR.
+
+---
+
+## 📜 License
+
+MIT – use it, remix it, and make it your own!
