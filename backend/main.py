@@ -367,7 +367,7 @@ def health():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For production, restrict to your frontend URL
+    allow_origins=ALLOWED_ORIGINS,  # Use allowed origins from config.py
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
