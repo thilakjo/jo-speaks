@@ -92,12 +92,12 @@ export const useUpload = () => {
   }, []);
 
   return {
-    selectedPdfs,
-    uploadProgress,
-    uploadResults,
-    uploadError,
-    onPdfFileChange,
-    onPdfUpload,
+    files: selectedPdfs,
+    progress: uploadProgress,
+    results: uploadResults,
+    error: uploadError,
+    handleFileChange: onPdfFileChange,
+    handleUpload: onPdfUpload,
     resetUpload,
   };
 };

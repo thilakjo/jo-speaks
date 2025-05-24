@@ -1,5 +1,5 @@
 # Hey, welcome to Jo Jo's PDF Q&A backend! Let's keep things friendly and clear.
-from fastapi import FastAPI, UploadFile, File, HTTPException, Request
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Body
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -15,6 +15,7 @@ import google.generativeai as genai  # Gemini for local Q&A
 from config import supabase, UPLOAD_DIR, TEXT_DIR, API_PORT, API_HOST, ALLOWED_ORIGINS, GOOGLE_API_KEY, GEMINI_MODEL
 import json
 from io import BytesIO
+from uuid import uuid4
 
 # Grab the logger so we can chat in the logs
 logger = logging.getLogger("uvicorn.error")
@@ -48,14 +49,12 @@ class QuestionRequest(BaseModel):
     question: str
 
 class DocumentResponse(BaseModel):
-    id: int
+    id: str
     filename: str
-    file_path: str
-    text_path: str
-    upload_date: str  # When did we get this doc?
-    metadata: dict
+    upload_url: str
+    uploaded_at: str
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class MessageResponse(BaseModel):
     id: int
@@ -145,7 +144,7 @@ async def health_check_endpoint(fastapi_req: Request):
     }
 
 @app.post("/api/upload")
-async def upload_pdf_endpoint(fastapi_req: Request, files: List[UploadFile] = File(...)):
+async def upload_pdf_endpoint(fastapi_req: Request, files: list[UploadFile] = File(...)):
     client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
     logger.info(f"Received multi-upload request for {len(files)} files from {client_host}")
     results = []

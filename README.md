@@ -6,7 +6,7 @@ Welcome to my home! I'm Thilak's little project for chatting with your PDFs, pow
 
 ## What's This All About?
 
-I let you upload PDFs, then you can ask questions about them—like "What's the main point of this doc?" or "When's the deadline?" I'll read, remember, and answer, all while keeping your files safe in Supabase. (And yes, I use Google Gemini for the smart stuff, but only locally for now.)
+I let you upload PDFs, then you can ask questions about them—like "What's the main point of this doc?" or "When's the deadline?" I'll read, remember, and answer, all while keeping your files safe in my cozy local folders. (And yes, I use Google Gemini for the smart stuff, but only locally for now.)
 
 ---
 
@@ -18,46 +18,32 @@ I let you upload PDFs, then you can ask questions about them—like "What's the 
 git clone https://github.com/thilakjo/jo-speaks.git && cd jo-speaks
 ```
 
-**Step 2: Fire Up Docker (Easiest Way)**
+**Step 2: Fire Up Locally (Easiest Way)**
 
 ```bash
-docker-compose up --build
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+cd frontend && npm install && cd ..
 ```
 
-_Pro tip: No need to mess with .env files—Docker will set it up for you!_
+**Step 3: Start the backend:**
 
-**Step 3: Open Your Browser**
+```bash
+uvicorn backend/api/index:app --reload --port 8000
+```
+
+**Step 4: Start the frontend:**
+
+```bash
+cd frontend
+npm run dev
+```
+
+**Step 5: Open Your Browser**
 
 - Head to [http://localhost:5173](http://localhost:5173)
 - Upload a PDF, ask away, and watch the magic happen!
-
----
-
-## Want to Tinker Locally? (No Docker)
-
-1. **Set up Python & Node:**
-
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install -r backend/requirements.txt
-   cd frontend && npm install && cd ..
-   ```
-
-2. **Start the backend:**
-
-   ```bash
-   uvicorn backend/api/index:app --reload --port 8000
-   ```
-
-3. **Start the frontend:**
-
-   ```bash
-   cd frontend
-   npm run dev
-   ```
-
-4. **Visit:** [http://localhost:5173](http://localhost:5173)
 
 ---
 

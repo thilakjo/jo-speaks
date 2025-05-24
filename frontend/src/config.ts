@@ -1,16 +1,6 @@
 // API Configuration
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-// Supabase Configuration
-export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-export const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_KEY;
-
-console.log(`[Config] API_URL initialized to: ${API_URL}`);
-console.log(`[Config] SUPABASE_URL initialized to: ${SUPABASE_URL}`);
-console.log(
-  `[Config] SUPABASE_KEY initialized: ${SUPABASE_KEY ? "Yes" : "No"}`
-);
-
 // Feature Flags
 export const ENABLE_FILE_UPLOAD = true;
 export const ENABLE_CHAT = true;
