@@ -10,8 +10,8 @@ from datetime import datetime
 from typing import Dict, Optional, List
 import logging
 import traceback
-import google.generativeai as genai
-from config import supabase, GOOGLE_API_KEY, GEMINI_MODEL, UPLOAD_DIR, TEXT_DIR, API_PORT, API_HOST, ALLOWED_ORIGINS
+# import google.generativeai as genai  # COMMENTED OUT FOR VERCEL SIZE LIMIT
+from config import supabase, UPLOAD_DIR, TEXT_DIR, API_PORT, API_HOST, ALLOWED_ORIGINS  # Remove GOOGLE_API_KEY, GEMINI_MODEL
 import json
 from io import BytesIO
 
@@ -26,18 +26,18 @@ for directory in [UPLOAD_DIR, TEXT_DIR]:
     os.makedirs(directory, exist_ok=True)
     logger.info(f"Ensured directory exists: {directory}")
 
-# Configure Google API for Gemini
-try:
-    logger.info(f"Configuring Google API with key: {'present' if GOOGLE_API_KEY else 'MISSING!'}")
-    if not GOOGLE_API_KEY:
-        raise ValueError("GOOGLE_API_KEY is not set in environment.")
-    genai.configure(api_key=GOOGLE_API_KEY)
-    logger.info(f"Initializing Gemini model: {GEMINI_MODEL}")
-    llm = genai.GenerativeModel(GEMINI_MODEL)
-    logger.info("LLM (Gemini) initialized successfully.")
-except Exception as e:
-    logger.error(f"Failed to initialize Gemini model: {str(e)}")
-    raise # Application cannot function without LLM
+# Gemini/GPT configuration and usage is commented out for Vercel deployment
+# try:
+#     logger.info(f"Configuring Google API with key: {'present' if GOOGLE_API_KEY else 'MISSING!'}")
+#     if not GOOGLE_API_KEY:
+#         raise ValueError("GOOGLE_API_KEY is not set in environment.")
+#     genai.configure(api_key=GOOGLE_API_KEY)
+#     logger.info(f"Initializing Gemini model: {GEMINI_MODEL}")
+#     llm = genai.GenerativeModel(GEMINI_MODEL)
+#     logger.info("LLM (Gemini) initialized successfully.")
+# except Exception as e:
+#     logger.error(f"Failed to initialize Gemini model: {str(e)}")
+#     raise # Application cannot function without LLM
 
 # Pydantic Models (request/response schemas)
 class QuestionRequest(BaseModel):
@@ -238,7 +238,6 @@ async def ask_question_endpoint(fastapi_req: Request, question_request: Question
         logger.info(f"Successfully read {len(context_text)} characters from '{text_path}' for '{original_filename}'.")
         if not context_text.strip():
             logger.warning(f"Context text for document '{original_filename}' is empty. Question might not be answerable.")
-            # Proceed, but Gemini might not give a good answer.
 
         logger.info(f"Creating chat session for document '{original_filename}' (id: {question_request.document_id}).")
         session_data = {"document_id": question_request.document_id}
@@ -251,13 +250,16 @@ async def ask_question_endpoint(fastapi_req: Request, question_request: Question
         session_id = session_response.data[0]['id']
         logger.info(f"Chat session created (id: {session_id}) for '{original_filename}'.")
 
-        prompt = f"Based *only* on the following text from the document named '{original_filename}', please answer the question. If the answer is not found in the text, state that clearly. Do not use any external knowledge.\n\nDocument Text:\n---\n{context_text}\n---\n\nQuestion: {question_request.question}\n\nAnswer:"
-        logger.info(f"Sending prompt to Gemini for '{original_filename}' (session: {session_id}). Prompt length: {len(prompt)} chars.")
-        
-        gemini_response = llm.generate_content(prompt)
-        answer = gemini_response.text # Using .text attribute for the answer
-        logger.info(f"Received answer from Gemini for '{original_filename}' (session: {session_id}). Answer length: {len(answer)} chars.")
-        logger.debug(f"Gemini Answer for '{original_filename}': {answer[:200]}...")
+        # Gemini call is commented out for Vercel deployment
+        # prompt = f"Based *only* on the following text from the document named '{original_filename}', please answer the question. If the answer is not found in the text, state that clearly. Do not use any external knowledge.\n\nDocument Text:\n---\n{context_text}\n---\n\nQuestion: {question_request.question}\n\nAnswer:"
+        # logger.info(f"Sending prompt to Gemini for '{original_filename}' (session: {session_id}). Prompt length: {len(prompt)} chars.")
+        # gemini_response = llm.generate_content(prompt)
+        # answer = gemini_response.text # Using .text attribute for the answer
+        # logger.info(f"Received answer from Gemini for '{original_filename}' (session: {session_id}). Answer length: {len(answer)} chars.")
+        # logger.debug(f"Gemini Answer for '{original_filename}': {answer[:200]}...")
+
+        # For Vercel, return a placeholder answer
+        answer = "[Gemini AI is disabled in this deployment. Please run locally for full functionality.]"
 
         messages_to_store = [
             {
