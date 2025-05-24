@@ -138,7 +138,7 @@ function App() {
   return (
     <ThemeProvider>
       <ErrorProvider>
-        <div className="flex flex-col h-screen bg-blue-50 dark:bg-gray-900 font-sans transition-colors duration-300">
+        <div className="flex flex-col h-screen overflow-hidden bg-blue-50 dark:bg-gray-900 font-sans transition-colors duration-300">
           <header className="flex-none bg-white dark:bg-gray-800 shadow-sm transition-colors duration-300 sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 py-6 sm:px-8 lg:px-12 flex items-center justify-between">
               <h1 className="text-3xl font-extrabold text-blue-900 dark:text-blue-200 tracking-tight">
@@ -148,23 +148,27 @@ function App() {
             </div>
           </header>
           <ErrorBanner />
-          <div className="flex flex-1 overflow-hidden max-w-7xl mx-auto w-full px-2 sm:px-4 py-4 sm:py-10 lg:px-12">
-            <aside className="w-full lg:w-1/4 flex-shrink-0 pr-4 overflow-y-auto">
-              <button
-                className="mb-4 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition text-base sm:text-lg"
-                onClick={() => setSelectedDocument(null)}
-              >
-                + Upload New PDF
-              </button>
-              <Suspense fallback={<LoadingFallback />}>
-                <HistorySidebar
-                  key={sidebarKey}
-                  onSelectDocument={handleDocumentSelect}
-                  selectedDocumentId={selectedDocument?.id}
-                />
-              </Suspense>
+          <div className="flex flex-1 max-w-7xl mx-auto w-full px-2 sm:px-4 py-4 sm:py-10 lg:px-12 overflow-hidden">
+            <aside className="w-3/10 lg:w-1/4 flex flex-col h-full">
+              <div className="flex-none p-0 pb-4">
+                <button
+                  className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition text-base sm:text-lg"
+                  onClick={() => setSelectedDocument(null)}
+                >
+                  + Upload New PDF
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <Suspense fallback={<LoadingFallback />}>
+                  <HistorySidebar
+                    key={sidebarKey}
+                    onSelectDocument={handleDocumentSelect}
+                    selectedDocumentId={selectedDocument?.id}
+                  />
+                </Suspense>
+              </div>
             </aside>
-            <main className="w-full lg:w-3/4 flex flex-col h-full bg-transparent overflow-y-auto">
+            <main className="w-7/10 lg:w-3/4 p-0 pl-4 flex flex-col h-full overflow-y-auto">
               <div className="flex-1 flex flex-col justify-center">
                 <div className="flex flex-col h-[60vh] sm:h-[70vh] md:h-[75vh] lg:h-[80vh] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl shadow-lg p-2 sm:p-6 overflow-hidden transition-colors duration-300">
                   <div

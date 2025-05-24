@@ -3,7 +3,6 @@ uvicorn[standard]
 python-multipart
 python-dotenv
 PyPDF2
-google-generativeai
 pydantic
 supabase
 httpx
