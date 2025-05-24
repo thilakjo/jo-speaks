@@ -6,8 +6,8 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
-RUN npm run build
 
-EXPOSE 5173
+# Copy .env.example to .env if .env does not exist
+ENTRYPOINT ["/bin/sh", "-c", "[ -f .env ] || cp .env.example .env; npm run build; exec npm run dev -- --host 0.0.0.0"]
 
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"] 
+EXPOSE 5173 

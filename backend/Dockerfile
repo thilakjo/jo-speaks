@@ -9,4 +9,5 @@ COPY . .
 
 ENV PYTHONUNBUFFERED=1
 
-CMD ["uvicorn", "api.index:app", "--host", "0.0.0.0", "--port", "8000"] 
+# Copy .env.example to .env if .env does not exist
+ENTRYPOINT ["/bin/sh", "-c", "[ -f .env ] || cp .env.example .env; exec uvicorn api.index:app --host 0.0.0.0 --port 8000"] 

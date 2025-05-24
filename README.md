@@ -1,5 +1,13 @@
 # Jo Speaks: PDF Q&A with Supabase, FastAPI, Vite/React, and Gemini AI
 
+**🚀 One-liner setup:**
+
+```bash
+git clone https://github.com/thilakjo/jo-speaks.git && cd jo-speaks && docker-compose up --build
+```
+
+> No need to manually copy .env—Docker will do it for you if you forget!
+
 **Live site:** [thilakjo.com](https://thilakjo.com)
 **Repo:** [github.com/thilakjo/jo-speaks](https://github.com/thilakjo/jo-speaks)
 
@@ -143,3 +151,13 @@ VITE_SUPABASE_KEY=your_supabase_anon_key
 
 - Built with FastAPI, Vite, React, Supabase, and Google Gemini AI
 - Maintained by [thilakjo.com](https://thilakjo.com)
+
+> **IMPORTANT:**
+>
+> - `.env.example` is prefilled with working Supabase and Gemini API keys. If you want a working demo, just run:
+>   ```bash
+>   cp .env.example .env
+>   docker-compose up --build
+>   ```
+> - **Do NOT edit `.env` unless you want to use your own Supabase or Gemini keys.**
+> - If you see `Invalid URL` or backend crashes, your `.env` is missing or has placeholder values.
