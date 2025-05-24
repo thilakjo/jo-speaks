@@ -1,3 +1,4 @@
+// This is Jo Jo's history sidebar – your friendly list of all the PDFs you've chatted with. 🦜
 import React, { useCallback, useEffect, useState } from "react";
 import { Card } from "./Card";
 import { getHistory, getDocumentHistory } from "../../services/api";
@@ -16,13 +17,18 @@ interface HistorySidebarProps {
 
 export const HistorySidebar = React.memo(
   ({ onSelectDocument, selectedDocumentId }: HistorySidebarProps) => {
+    // All the PDFs we've seen so far
     const [documents, setDocuments] = useState<Document[]>([]);
+    // How many questions have been asked about each PDF?
     const [questionCounts, setQuestionCounts] = useState<
       Record<string, number>
     >({});
+    // Are we loading?
     const [isLoading, setIsLoading] = useState(true);
+    // Any errors?
     const [error, setError] = useState<string | null>(null);
 
+    // Load the history and question counts
     const loadHistory = useCallback(async () => {
       try {
         setIsLoading(true);
@@ -50,7 +56,7 @@ export const HistorySidebar = React.memo(
         );
         setQuestionCounts(counts);
       } catch (err) {
-        setError("Failed to load history");
+        setError("Oops! Couldn't load your PDF history. Try again?");
         console.error("Error loading history:", err);
       } finally {
         setIsLoading(false);
@@ -61,6 +67,7 @@ export const HistorySidebar = React.memo(
       loadHistory();
     }, [loadHistory]);
 
+    // When you click a document, let the parent know
     const handleDocumentClick = useCallback(
       (document: Document) => {
         onSelectDocument(document);
@@ -71,7 +78,9 @@ export const HistorySidebar = React.memo(
     if (isLoading) {
       return (
         <Card className="p-4">
-          <p className="text-sm text-gray-500">Loading history...</p>
+          <p className="text-sm text-gray-500">
+            Jo Jo is fetching your history...
+          </p>
         </Card>
       );
     }
@@ -93,7 +102,9 @@ export const HistorySidebar = React.memo(
     if (documents.length === 0) {
       return (
         <Card className="p-4">
-          <p className="text-sm text-gray-500">No documents in history</p>
+          <p className="text-sm text-gray-500">
+            No PDFs here yet! Upload one to get started.
+          </p>
         </Card>
       );
     }
@@ -101,7 +112,9 @@ export const HistorySidebar = React.memo(
     return (
       <Card className="overflow-hidden">
         <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">History</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Your PDF History
+          </h2>
         </div>
         <div className="overflow-y-auto max-h-[calc(100vh-200px)]">
           {documents.map((doc) => (

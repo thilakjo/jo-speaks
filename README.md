@@ -1,101 +1,98 @@
-# Jo Speaks: PDF Q&A with Supabase, FastAPI, Vite/React, and Gemini AI
+# jo-speaks 🦜
 
-## Features
+Hey there! 👋
 
-- Upload PDFs, extract text, and ask questions about them
-- All data stored in Supabase (documents, chat sessions, messages)
-- FastAPI backend, Vite/React frontend
-- **Gemini AI (Google Generative AI) enabled locally** for answering questions
-- CORS and monorepo Vercel deployment ready
+Welcome to **jo-speaks** – your friendly, open-source PDF Q&A BFF. Upload any PDF, ask questions, and let Jo Jo (that's me!) fetch the answers for you. Whether you're a student, researcher, or just PDF-curious, Jo Jo is here to help you chat with your documents like never before.
 
 ---
 
-## Local Development
+## 🚀 Features
 
-### 1. Clone and Install
+- **Upload PDFs**: Drag, drop, and store your PDFs with ease.
+- **Ask Anything**: Type your questions and get instant answers from the document's content.
+- **History**: See all your uploaded PDFs and chat history in one place.
+- **Supabase-powered**: All your files and data are securely stored in Supabase.
+- **Gemini AI**: Local Gemini support for smart, context-aware answers.
+- **Modern UI**: Built with React, Vite, and FastAPI for a snappy, beautiful experience.
 
-```bash
-git clone <your-repo-url>
-cd pdf
+---
+
+## 🛠️ Getting Started
+
+### 1. Clone the repo
+
+```sh
+git clone https://github.com/yourusername/jo-speaks.git
+cd jo-speaks
+```
+
+### 2. Set up your environment
+
+- Copy `.env.example` to `.env` and fill in your Supabase and Google API keys.
+- Make sure you have Python 3.11+ and Node.js 18+ installed.
+
+### 3. Start the backend
+
+```sh
+cd backend
 python -m venv .venv
 source .venv/bin/activate
-pip install -r backend/requirements.txt
-cd frontend
-npm install
-```
-
-### 2. Environment Variables
-
-Copy `.env.example` to `.env` in the project root and fill in:
-
-```env
-# Supabase
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-
-# Google Gemini
-GOOGLE_API_KEY=your_google_api_key  # Get from https://makersuite.google.com/app/apikey
-
-# API
-API_PORT=8000
-API_HOST=0.0.0.0
-
-# Frontend
-VITE_API_URL=http://localhost:8000/api
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_KEY=your_supabase_anon_key
-```
-
-### 3. Run Backend (with Gemini AI)
-
-```bash
-cd backend
+pip install -r requirements.txt
 uvicorn api.index:app --reload --port 8000
 ```
 
-- You should see logs like:
-  - `Configuring Google API with key: present`
-  - `Initializing Gemini model: gemini-1.5-flash`
-  - `LLM (Gemini) initialized successfully.`
+### 4. Start the frontend
 
-### 4. Run Frontend
-
-```bash
+```sh
 cd frontend
+npm install
 npm run dev
 ```
 
-- Open the local URL (e.g., http://localhost:5173 or 5174)
-
-### 5. Usage
-
-- Upload a PDF
-- Ask a question about it
-- Gemini AI will answer using only the PDF text
+- Visit [http://localhost:5173](http://localhost:5173) and meet Jo Jo!
 
 ---
 
-## Troubleshooting
+## 🤖 How It Works
 
-- **Gemini not answering?**
-  - Check your `GOOGLE_API_KEY` in `.env`
-  - Check backend logs for Gemini errors
-- **Supabase errors?**
-  - Check your Supabase keys and table setup
-- **CORS errors?**
-  - Make sure frontend uses `VITE_API_URL=http://localhost:8000/api`
+- **Upload**: PDFs are sent straight to Supabase Storage and indexed in the database.
+- **Ask**: Your questions are answered using Gemini AI (if configured) or a friendly fallback.
+- **History**: All your uploads and chats are saved, so you can pick up where you left off.
 
 ---
 
-## Vercel Deployment
+## 📝 FAQ
 
-- Gemini AI is **disabled** on Vercel (due to cold start and size limits)
-- All endpoints are namespaced under `/api` for correct routing
-- See `vercel.json` for monorepo build setup
+**Q: Is my data safe?**
+
+> Yep! Everything is stored in your own Supabase project. You control the keys.
+
+**Q: Can I use my own AI model?**
+
+> Absolutely! Just swap out the Gemini config in the backend.
+
+**Q: Can I deploy this to Vercel/Netlify/wherever?**
+
+> You bet. The app is serverless-friendly and easy to deploy anywhere.
+
+**Q: Something broke! What do I do?**
+
+> Check the logs, open an issue, or just ask Jo Jo (me) for help. I'm here for you!
 
 ---
 
-## Credits
+## 🦜 About Jo Jo
 
-- Built with FastAPI, Vite, React, Supabase, and Google Gemini AI
+Jo Jo is your PDF Q&A BFF – always ready to help, never judges your questions, and loves a good PDF. Built with love by [your name here].
+
+---
+
+## 💡 Contributing
+
+Pull requests, issues, and stars are always welcome! If you have ideas, want to add features, or just want to say hi, open an issue or PR.
+
+---
+
+## 📜 License
+
+MIT – use it, remix it, and make it your own!

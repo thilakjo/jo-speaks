@@ -1,3 +1,4 @@
+// This is Jo Jo's chat panel – where all the Q&A magic happens! Friendly, conversational, and always ready to help. 🦜
 import React, { useCallback, useEffect, useState } from "react";
 import { Card } from "./Card";
 import { Button } from "./Button";
@@ -16,12 +17,15 @@ interface ChatPanelProps {
 }
 
 export const ChatPanel = React.memo(({ documentId }: ChatPanelProps) => {
+  // All the messages for this chat session
   const [messages, setMessages] = useState<Message[]>([]);
+  // What the user is typing
   const [input, setInput] = useState("");
+  // Are we waiting for Jo Jo to answer?
   const [isLoading, setIsLoading] = useState(false);
   const { setError } = useError();
 
-  // Load chat history when documentId changes
+  // Whenever the document changes, load its chat history
   useEffect(() => {
     const loadHistory = async () => {
       try {
@@ -42,12 +46,13 @@ export const ChatPanel = React.memo(({ documentId }: ChatPanelProps) => {
         });
         setMessages(allMessages);
       } catch (err: any) {
-        setError(err.message || "Failed to load chat history");
+        setError(err.message || "Couldn't load our chat history. Try again?");
       }
     };
     loadHistory();
   }, [documentId, setError]);
 
+  // When the user submits a question, add it and get Jo Jo's answer
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -76,7 +81,7 @@ export const ChatPanel = React.memo(({ documentId }: ChatPanelProps) => {
         setMessages((prev) => [...prev, assistantMessage]);
       } catch (error: any) {
         setError(
-          error.message || "Sorry, I encountered an error. Please try again."
+          error.message || "Oops! Jo Jo had a hiccup. Please try again."
         );
       } finally {
         setIsLoading(false);
@@ -116,12 +121,12 @@ export const ChatPanel = React.memo(({ documentId }: ChatPanelProps) => {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question about the PDF..."
+            placeholder="Ask Jo Jo anything about your PDF..."
             className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={isLoading}
           />
           <Button type="submit" disabled={isLoading || !input.trim()}>
-            {isLoading ? "Thinking..." : "Ask"}
+            {isLoading ? "Jo Jo is thinking..." : "Ask"}
           </Button>
         </div>
       </form>

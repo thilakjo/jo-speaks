@@ -1,5 +1,6 @@
-# Trigger redeploy: ensure Vercel uses FastAPI serverless function
-from fastapi import FastAPI, UploadFile, File, HTTPException, Request
+# Hey there! This is Jo Jo's brain – the FastAPI backend for your PDF Q&A BFF. Here we handle uploads, chat, and all the magic. Enjoy reading and hacking! 💬🦜
+
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -11,23 +12,23 @@ from datetime import datetime
 from typing import Dict, Optional, List
 import logging
 import traceback
-import google.generativeai as genai  # ENABLED for local Gemini support
-from config import supabase, UPLOAD_DIR, TEXT_DIR, API_PORT, API_HOST, ALLOWED_ORIGINS, GOOGLE_API_KEY, GEMINI_MODEL  # Import GOOGLE_API_KEY, GEMINI_MODEL
+import google.generativeai as genai  # Gemini AI for local magic
+from config import supabase, UPLOAD_DIR, TEXT_DIR, API_PORT, API_HOST, ALLOWED_ORIGINS, GOOGLE_API_KEY, GEMINI_MODEL
 import json
 from io import BytesIO
 
 # Use the logger configured in config.py (uvicorn.error)
 logger = logging.getLogger("uvicorn.error")
 
-# FastAPI app setup
+# Let's get this party started!
 app = FastAPI(title="PDF Q&A API")
 
-# Create directories if they don't exist (idempotent)
+# Make sure our folders exist (so we don't trip over missing directories)
 for directory in [UPLOAD_DIR, TEXT_DIR]:
     os.makedirs(directory, exist_ok=True)
     logger.info(f"Ensured directory exists: {directory}")
 
-# Gemini/GPT configuration and usage is enabled for local development
+# Gemini/GPT configuration for local dev fun
 llm = None
 if GOOGLE_API_KEY:
     try:
@@ -42,7 +43,7 @@ if GOOGLE_API_KEY:
 else:
     logger.warning("GOOGLE_API_KEY not set. Gemini AI will be disabled.")
 
-# Pydantic Models (request/response schemas)
+# --- Pydantic Models ---
 class QuestionRequest(BaseModel):
     document_id: int
     question: str
@@ -54,7 +55,6 @@ class DocumentResponse(BaseModel):
     text_path: str
     upload_date: str  # ISO format string
     metadata: dict
-
     class Config:
         from_attributes = True
 
@@ -64,7 +64,6 @@ class MessageResponse(BaseModel):
     role: str
     content: str
     created_at: str  # ISO format string
-
     class Config:
         from_attributes = True
 
@@ -73,12 +72,12 @@ class ChatSessionResponse(BaseModel):
     document_id: int
     created_at: str  # ISO format string
     messages: List[MessageResponse]
-
     class Config:
         from_attributes = True
 
-# Helper functions
+# --- Helper Functions ---
 def extract_text_from_pdf_bytes(pdf_bytes: bytes, original_filename: str) -> str:
+    """Pulls out all the readable text from a PDF file. If it's just images, we'll warn you!"""
     logger.info(f"Extracting text from PDF bytes for: {original_filename}")
     try:
         reader = PdfReader(BytesIO(pdf_bytes))
@@ -98,6 +97,7 @@ def extract_text_from_pdf_bytes(pdf_bytes: bytes, original_filename: str) -> str
         raise ValueError(f"Could not extract text from PDF: {original_filename}") from e
 
 def save_text_to_file(text: str, filename_base: str) -> str:
+    """Save the extracted text to a .txt file, so we can chat with it later!"""
     safe_filename_base = "".join(c if c.isalnum() or c in ('.', '-', '_') else '_' for c in filename_base)
     text_filename = f"{safe_filename_base}.txt"
     text_path = os.path.join(TEXT_DIR, text_filename)
@@ -113,12 +113,11 @@ def save_text_to_file(text: str, filename_base: str) -> str:
 
 @app.get("/api/health")
 async def health_check_endpoint(fastapi_req: Request):
+    """Quick health check – is Jo Jo awake and ready?"""
     client_host = fastapi_req.client.host if fastapi_req.client else "unknown"
     logger.info(f"Health check requested from {client_host}")
-    
     # Check Supabase connection as part of health
     try:
-        # Check if documents table exists and is accessible
         response = supabase.table("documents").select("id").limit(1).execute()
         supabase_healthy = True
         supabase_message = "Supabase connection successful."
@@ -127,15 +126,12 @@ async def health_check_endpoint(fastapi_req: Request):
         logger.error("Supabase health check failed.", exc_info=e)
         supabase_healthy = False
         supabase_message = f"Supabase connection failed: {str(e)}"
-    
     # Check if required directories exist
     dirs_healthy = all(os.path.exists(d) for d in [UPLOAD_DIR, TEXT_DIR])
     dirs_message = "Required directories exist." if dirs_healthy else "Missing required directories."
-    
     # Check if Google API is configured
     google_api_healthy = bool(GOOGLE_API_KEY)
     google_api_message = "Google API key is configured." if google_api_healthy else "Google API key is missing."
-    
     return {
         "status": "ok" if all([supabase_healthy, dirs_healthy]) else "degraded",
         "message": "API is healthy",
@@ -148,6 +144,7 @@ async def health_check_endpoint(fastapi_req: Request):
 
 @app.post("/api/upload")
 async def upload_pdf_endpoint(fastapi_req: Request, files: List[UploadFile] = File(...)):
+    """Handles PDF uploads. We'll save your file, extract the text, and remember it for Q&A!"""
     client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
     logger.info(f"Received multi-upload request for {len(files)} files from {client_host}")
     results = []
@@ -156,7 +153,7 @@ async def upload_pdf_endpoint(fastapi_req: Request, files: List[UploadFile] = Fi
         try:
             if not file.filename or not file.filename.lower().endswith('.pdf'):
                 logger.warning(f"Invalid file type or missing filename: '{file.filename}' from {client_host}")
-                results.append({"filename": file.filename, "error": "Invalid file type. Only PDF files with a .pdf extension are allowed."})
+                results.append({"filename": file.filename, "error": "Oops! Only PDF files with a .pdf extension are allowed."})
                 continue
             unique_id = uuid.uuid4()
             original_filename_base = os.path.splitext(file.filename)[0]
@@ -168,7 +165,7 @@ async def upload_pdf_endpoint(fastapi_req: Request, files: List[UploadFile] = Fi
             logger.info(f"Read {len(pdf_bytes)} bytes from uploaded file '{file.filename}'")
             if not pdf_bytes:
                 logger.error(f"Uploaded file '{file.filename}' is empty.")
-                results.append({"filename": file.filename, "error": "Uploaded file is empty."})
+                results.append({"filename": file.filename, "error": "Looks like your file was empty! Try again?"})
                 continue
             with open(pdf_file_path, "wb") as buffer:
                 buffer.write(pdf_bytes)
@@ -198,14 +195,14 @@ async def upload_pdf_endpoint(fastapi_req: Request, files: List[UploadFile] = Fi
                     "document_id": document_id,
                     "filename": file.filename,
                     "text_path": text_file_path,
-                    "message": "File uploaded and processed successfully."
+                    "message": "File uploaded and processed successfully! 🎉"
                 })
             else:
                 logger.error(f"Failed to store document '{file.filename}' in Supabase. Error: {response.error}, Status: {response.status_code}, Count: {response.count}")
-                results.append({"filename": file.filename, "error": f"Failed to store document metadata in Supabase. Details: {response.error.message if response.error else 'Unknown error'}"})
+                results.append({"filename": file.filename, "error": f"Couldn't save your document info. Details: {response.error.message if response.error else 'Unknown error'}"})
         except Exception as e:
             logger.error(f"Unexpected error during upload of '{file.filename}'", exc_info=True)
-            results.append({"filename": file.filename, "error": f"An unexpected server error occurred during upload: {str(e)}"})
+            results.append({"filename": file.filename, "error": f"Yikes! Something went wrong: {str(e)}"})
         finally:
             if file:
                 try:
@@ -217,42 +214,34 @@ async def upload_pdf_endpoint(fastapi_req: Request, files: List[UploadFile] = Fi
 
 @app.post("/api/ask")
 async def ask_question_endpoint(fastapi_req: Request, question_request: QuestionRequest):
+    """Ask Jo Jo anything about your PDF! We'll do our best to answer based on the text."""
     client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
     logger.info(f"Received question for document {question_request.document_id} from {client_host}: '{question_request.question}'")
-
     try:
         logger.info(f"Fetching document (id: {question_request.document_id}) text_path from Supabase.")
         doc_response = supabase.table("documents").select("text_path, filename").eq("id", question_request.document_id).maybe_single().execute()
-
         if not doc_response.data:
             logger.warning(f"Document id {question_request.document_id} not found for '{question_request.question}'.")
-            raise HTTPException(status_code=404, detail=f"Document with id {question_request.document_id} not found.")
-        
+            raise HTTPException(status_code=404, detail=f"Sorry, I couldn't find that document!")
         text_path = doc_response.data.get("text_path")
         original_filename = doc_response.data.get("filename", f"DocumentID_{question_request.document_id}")
         logger.info(f"Found text_path: '{text_path}' for document '{original_filename}'.")
-
         if not text_path or not os.path.exists(text_path):
             logger.error(f"Text file '{text_path}' for document '{original_filename}' (id: {question_request.document_id}) not found or inaccessible.")
-            raise HTTPException(status_code=500, detail=f"Extracted text for document '{original_filename}' is missing or inaccessible.")
-
+            raise HTTPException(status_code=500, detail=f"Oops! The extracted text for '{original_filename}' is missing or inaccessible.")
         with open(text_path, "r", encoding="utf-8") as f:
             context_text = f.read()
         logger.info(f"Successfully read {len(context_text)} characters from '{text_path}' for '{original_filename}'.")
         if not context_text.strip():
             logger.warning(f"Context text for document '{original_filename}' is empty. Question might not be answerable.")
-
         logger.info(f"Creating chat session for document '{original_filename}' (id: {question_request.document_id}).")
         session_data = {"document_id": question_request.document_id}
         session_response = supabase.table("chat_sessions").insert(session_data).execute()
-
         if not session_response.data or len(session_response.data) == 0:
             logger.error(f"Failed to create chat session for document '{original_filename}'. Supabase error: {session_response.error}")
-            raise HTTPException(status_code=500, detail="Could not create chat session.")
-        
+            raise HTTPException(status_code=500, detail="Could not create chat session. Please try again!")
         session_id = session_response.data[0]['id']
         logger.info(f"Chat session created (id: {session_id}) for '{original_filename}'.")
-
         # Use Gemini if available
         if llm:
             prompt = f"Based *only* on the following text from the document named '{original_filename}', please answer the question. If the answer is not found in the text, state that clearly. Do not use any external knowledge.\n\nDocument Text:\n---\n{context_text}\n---\n\nQuestion: {question_request.question}\n\nAnswer:"
@@ -263,7 +252,6 @@ async def ask_question_endpoint(fastapi_req: Request, question_request: Question
             logger.debug(f"Gemini Answer for '{original_filename}': {answer[:200]}...")
         else:
             answer = "[Gemini AI is disabled in this deployment. Please run locally for full functionality.]"
-
         messages_to_store = [
             {
                 "session_id": session_id,
@@ -280,25 +268,23 @@ async def ask_question_endpoint(fastapi_req: Request, question_request: Question
         ]
         logger.info(f"Storing {len(messages_to_store)} messages in Supabase for session {session_id} ('{original_filename}').")
         message_response = supabase.table("messages").insert(messages_to_store).execute()
-
         if not message_response.data:
             logger.warning(f"Failed to store messages for session {session_id} ('{original_filename}'). Supabase error: {message_response.error.message if message_response.error else 'Unknown'}")
-
         return {
             "answer": answer,
             "document_id": question_request.document_id,
             "session_id": session_id
         }
-
     except HTTPException as http_exc:
         logger.warning(f"HTTPException while asking question for doc {question_request.document_id}: {http_exc.detail}", exc_info=True)
         raise http_exc
     except Exception as e:
         logger.error(f"Unexpected error while asking question for doc {question_request.document_id}: '{question_request.question}'", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Yikes! Something went wrong: {str(e)}")
 
 @app.get("/api/history", response_model=List[DocumentResponse])
 async def get_history_endpoint(fastapi_req: Request):
+    """Show me all the PDFs we've seen so far!"""
     client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
     logger.info(f"Received request for document history from {client_host}")
     try:
@@ -318,34 +304,30 @@ async def get_history_endpoint(fastapi_req: Request):
             return [] # Return empty list if no documents
     except Exception as e:
         logger.error("Error fetching document history from Supabase", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve document history: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Couldn't get your document history: {str(e)}")
 
 @app.get("/api/history/{document_id}", response_model=List[ChatSessionResponse])
 async def get_document_specific_history_endpoint(document_id: int, fastapi_req: Request):
+    """Show me all the chats we've had about a specific PDF!"""
     client_host = fastapi_req.client.host if fastapi_req.client else "unknown_client"
     logger.info(f"Received request for history of document_id: {document_id} from {client_host}")
     try:
         doc_check = supabase.table("documents").select("id, filename").eq("id", document_id).maybe_single().execute()
         if not doc_check.data:
             logger.warning(f"Document with id {document_id} not found for history retrieval.")
-            raise HTTPException(status_code=404, detail=f"Document with id {document_id} not found.")
+            raise HTTPException(status_code=404, detail=f"Sorry, I couldn't find that document!")
         original_filename = doc_check.data.get("filename", f"DocumentID_{document_id}")
         logger.info(f"Found document '{original_filename}' for history retrieval.")
-
         sessions_response = supabase.table("chat_sessions").select("id, created_at, document_id").eq("document_id", document_id).order("created_at", desc=True).execute()
-        
         if not sessions_response.data:
             logger.info(f"No chat sessions found for document '{original_filename}' (id: {document_id}).")
             return []
-
         chat_sessions_with_messages = []
         for session in sessions_response.data:
             logger.debug(f"Fetching messages for session {session['id']} of document '{original_filename}'.")
             messages_response = supabase.table("messages").select("id, session_id, role, content, created_at").eq("session_id", session['id']).order("created_at", desc=False).execute()
-            
             messages_data = messages_response.data if messages_response.data else []
             logger.debug(f"Fetched {len(messages_data)} messages for session {session['id']}.")
-            
             session_data = ChatSessionResponse(
                 id=session['id'],
                 document_id=session['document_id'],
@@ -353,21 +335,42 @@ async def get_document_specific_history_endpoint(document_id: int, fastapi_req: 
                 messages=messages_data
             )
             chat_sessions_with_messages.append(session_data)
-        
         logger.info(f"Fetched {len(chat_sessions_with_messages)} chat sessions with messages for document '{original_filename}' (id: {document_id}).")
         return chat_sessions_with_messages
-
     except HTTPException as http_exc:
         logger.warning(f"HTTPException during history retrieval for doc {document_id}: {http_exc.detail}", exc_info=True)
         raise http_exc
     except Exception as e:
         logger.error(f"Error fetching history for document_id {document_id}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve history for document {document_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Couldn't get chat history for this document: {str(e)}")
+
+@app.delete("/api/admin/clear-all")
+async def clear_all_data_endpoint(secret: str = "admin123"):  # Simple secret for safety
+    """Danger zone! This deletes all documents, chats, and files. Use with care!"""
+    if secret != "admin123":
+        raise HTTPException(status_code=403, detail="Forbidden")
+    # Delete all messages
+    supabase.table("messages").delete().neq("id", 0).execute()
+    # Delete all chat sessions
+    supabase.table("chat_sessions").delete().neq("id", 0).execute()
+    # Delete all documents
+    supabase.table("documents").delete().neq("id", 0).execute()
+    # Remove all files from uploads and texts
+    for folder in [UPLOAD_DIR, TEXT_DIR]:
+        for filename in os.listdir(folder):
+            file_path = os.path.join(folder, filename)
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+    return {"status": "success", "message": "All data cleared. Fresh start!"}
 
 @app.get("/api/health")
 def health():
+    """Legacy health check. Just says 'ok'."""
     return {"status": "ok"}
 
+# CORS setup – let the frontend talk to us!
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,  # Use allowed origins from config.py
