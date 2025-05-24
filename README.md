@@ -101,6 +101,11 @@ VITE_SUPABASE_KEY=your_supabase_anon_key
 - **Gemini not answering?**
   - Check your `GOOGLE_API_KEY` in `.env`
   - Check backend logs for Gemini errors
+  - **If you see `ModuleNotFoundError: No module named 'google'` in Docker, make sure `google-generativeai` is in `backend/requirements.txt` and run:**
+    ```bash
+    docker-compose build --no-cache
+    docker-compose up
+    ```
 - **Supabase errors?**
   - Check your Supabase keys and table setup
 - **CORS errors?**

@@ -7,4 +7,5 @@ pydantic
 supabase
 httpx
 PyJWT
+google-generativeai
  
